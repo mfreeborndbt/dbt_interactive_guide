@@ -1212,7 +1212,7 @@ export default function DbtModels() {
                 return (
                   <button
                     key={adv.id}
-                    onClick={() => setActiveId(adv.id)}
+                    onClick={() => { setActiveId(adv.id); setShowDbt(false) }}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 whitespace-nowrap text-left w-full ${
                       isActive
                         ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200'
@@ -1237,7 +1237,7 @@ export default function DbtModels() {
                 return (
                   <button
                     key={adv.id}
-                    onClick={() => setActiveId(adv.id)}
+                    onClick={() => { setActiveId(adv.id); setShowDbt(false) }}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap text-left w-full ${
                       isActive
                         ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200'
