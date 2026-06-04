@@ -13,6 +13,9 @@ import DevelopmentWorkflow from './components/DevelopmentWorkflow'
 // Models components
 import DbtModels from './components/DbtModels'
 
+// Data Modeling components
+import DataModeling from './components/DataModeling'
+
 // Orchestration components
 import PreDbtOrchestration from './components/PreDbtOrchestration'
 import HowDbtWorks from './components/HowDbtWorks'
@@ -22,15 +25,20 @@ import SettingUpTests from './components/SettingUpTests'
 import DbtBuildSimulator from './components/DbtBuildSimulator'
 import StateAwareOrchestration from './components/StateAwareOrchestration'
 
+// Mesh components
+import DbtMesh from './components/DbtMesh'
+
 // Semantic Layer components
 import SemanticLayer from './components/SemanticLayer'
 
 const topTabs = [
   { key: 'architecture', label: 'Architecture & Environments' },
   { key: 'models', label: 'dbt Models' },
-  { key: 'development', label: 'dbt Development Workflow' },
-  { key: 'orchestration', label: 'dbt Orchestration' },
-  { key: 'semantic', label: 'dbt Semantic Layer' },
+  { key: 'modeling', label: 'Data Modeling' },
+  { key: 'development', label: 'Development Workflow' },
+  { key: 'orchestration', label: 'Orchestration' },
+  { key: 'mesh', label: 'Mesh' },
+  { key: 'semantic', label: 'Semantic Layer' },
 ]
 
 // Orchestration sub-config
@@ -225,12 +233,12 @@ function OrchestrationPage() {
         </div>
       </div>
 
-      {/* Phase 3: State-Aware Orchestration */}
+      {/* Phase 3: dbt State */}
       <div className="section-container py-4 pb-16">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-2">
             <span className="text-base font-bold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-1.5 rounded-full">Phase 3</span>
-            <h2 className="text-2xl font-bold text-gray-900">State-Aware Orchestration</h2>
+            <h2 className="text-2xl font-bold text-gray-900">dbt State</h2>
           </div>
           <p className="text-sm text-gray-500 mt-2">dbt can detect which sources have new data and only rebuild what's necessary.</p>
         </div>
@@ -245,8 +253,10 @@ function OrchestrationPage() {
 const tabDescriptions = {
   architecture: 'How dbt connects Git, transformation logic, and your data platform.',
   models: 'What dbt models offer and why they change how you build data pipelines.',
+  modeling: 'The four layers of a well-structured dbt project: sources, staging, intermediate, and marts.',
   development: 'The end-to-end workflow from feature branch to production deployment.',
   orchestration: 'How dbt orchestration makes data pipelines simpler, faster, and cheaper.',
+  mesh: 'Scale from one project to many with governed model sharing, scoped lineage, and safe versioning.',
   semantic: 'A governed metrics layer that turns questions into correct SQL for LLMs, apps, and BI.',
 }
 
@@ -310,6 +320,11 @@ export default function App() {
             <DbtModels />
           </motion.div>
         )}
+        {activeTab === 'modeling' && (
+          <motion.div key="modeling" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+            <DataModeling />
+          </motion.div>
+        )}
         {activeTab === 'development' && (
           <motion.div key="dev" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
             <DevelopmentPage />
@@ -318,6 +333,11 @@ export default function App() {
         {activeTab === 'orchestration' && (
           <motion.div key="orch" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
             <OrchestrationPage />
+          </motion.div>
+        )}
+        {activeTab === 'mesh' && (
+          <motion.div key="mesh" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+            <DbtMesh />
           </motion.div>
         )}
         {activeTab === 'semantic' && (
