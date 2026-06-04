@@ -109,7 +109,7 @@ function ModelDiscovery() {
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">247 models across 6 projects</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Hundreds/Thousands of models across multiple domains</span>
                 <div className="flex gap-1.5">
                   {projectNames.map((p, i) => (
                     <button
