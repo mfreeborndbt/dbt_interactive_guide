@@ -1433,7 +1433,7 @@ function ProductionJobUI() {
                   <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5"/></svg>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-700">State-aware orchestration</p>
+                  <p className="text-xs font-medium text-gray-700">dbt state</p>
                   <p className="text-xs text-gray-400">Enable orchestration that adapts to state changes.</p>
                 </div>
               </label>
@@ -1554,9 +1554,9 @@ function ProductionStep1() {
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
             <span className="text-lg mt-0.5">🧠</span>
             <div>
-              <p className="text-sm font-semibold text-amber-800">State-aware orchestration</p>
+              <p className="text-sm font-semibold text-amber-800">dbt state</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                With state-aware orchestration enabled, prod builds only what actually changed since the last successful run, keeping warehouse costs low on large projects.
+                With dbt state enabled, prod builds only what actually changed since the last successful run, keeping warehouse costs low on large projects.
               </p>
             </div>
           </div>
