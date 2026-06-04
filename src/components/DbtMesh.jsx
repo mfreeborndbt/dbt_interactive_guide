@@ -60,6 +60,12 @@ const allModels = [
   { name: 'rpt_mrr', proj: 2 }, { name: 'rpt_arr_growth', proj: 2 }, { name: 'rpt_funnel', proj: 1 }, { name: 'rpt_exec_summary', proj: 0 },
   { name: 'exp_finance_dash', proj: 2 }, { name: 'exp_ops_monitor', proj: 4 }, { name: 'exp_marketing_bi', proj: 1 }, { name: 'exp_product_kpi', proj: 3 },
   { name: 'exp_ceo_report', proj: 0 }, { name: 'exp_board_deck', proj: 5 }, { name: 'snap_customers', proj: 0 }, { name: 'snap_products', proj: 3 },
+  { name: 'stg_contracts', proj: 2 }, { name: 'stg_leads', proj: 1 }, { name: 'stg_opportunities', proj: 1 }, { name: 'stg_accounts', proj: 2 }, { name: 'stg_territories', proj: 4 },
+  { name: 'int_lead_scoring', proj: 1 }, { name: 'int_deal_pipeline', proj: 1 }, { name: 'int_quota_attain', proj: 2 }, { name: 'int_territory_map', proj: 4 }, { name: 'int_forecast_agg', proj: 2 },
+  { name: 'fct_pipeline', proj: 1 }, { name: 'fct_bookings', proj: 2 }, { name: 'fct_renewals', proj: 2 }, { name: 'fct_usage', proj: 3 }, { name: 'fct_support_tickets', proj: 4 },
+  { name: 'dim_accounts', proj: 2 }, { name: 'dim_territories', proj: 4 }, { name: 'dim_segments', proj: 0 }, { name: 'dim_plans', proj: 3 }, { name: 'dim_currencies', proj: 5 },
+  { name: 'rpt_pipeline_vel', proj: 1 }, { name: 'rpt_win_rate', proj: 1 }, { name: 'rpt_nrr', proj: 2 }, { name: 'rpt_usage_trends', proj: 3 }, { name: 'rpt_support_sla', proj: 4 },
+  { name: 'exp_sales_dash', proj: 1 }, { name: 'exp_cs_health', proj: 4 }, { name: 'exp_rev_forecast', proj: 2 }, { name: 'snap_accounts', proj: 2 }, { name: 'snap_pipeline', proj: 1 },
 ]
 
 const projectColors = ['#6366f1', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed']
