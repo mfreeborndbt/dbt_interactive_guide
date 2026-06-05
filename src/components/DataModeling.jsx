@@ -255,7 +255,16 @@ function StagingTopic() {
                     <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">SIGNUP_DT</span>
                   </div>
                 </HoverBox>
-                <div className="text-gray-300 text-lg font-bold">|</div>
+                <svg width="400" height="40" viewBox="0 0 400 40" className="shrink-0">
+                  <defs>
+                    <marker id="stg-wo-arrow" viewBox="0 0 10 10" refX="5" refY="9" markerWidth={5} markerHeight={5} orient="0">
+                      <path d="M 0 0 L 5 10 L 10 0 z" fill="#d1d5db" />
+                    </marker>
+                  </defs>
+                  <path d="M 200 0 C 200 20, 67 20, 67 40" fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#stg-wo-arrow)" />
+                  <path d="M 200 0 C 200 16, 200 24, 200 40" fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#stg-wo-arrow)" />
+                  <path d="M 200 0 C 200 20, 333 20, 333 40" fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#stg-wo-arrow)" />
+                </svg>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg">
                   {[
                     { name: 'report_a', cols: ['cust_id', 'name', 'signup_date'] },
@@ -282,36 +291,61 @@ function StagingTopic() {
               <p className="text-sm text-gray-500 mt-1">Staging models set naming conventions, light casting, and key tests early, so joins downstream stay correct.</p>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-              <div className="flex flex-col items-center gap-4">
-                <HoverBox className="bg-white border border-gray-200 rounded-lg px-4 py-2 text-center hover:shadow-md transition-shadow" style={{ borderColor: LC.source.border }}>
-                  <div className="font-mono text-[11px] font-semibold" style={{ color: LC.source.fill }}>raw_customers</div>
-                  <div className="flex gap-1.5 mt-1.5 justify-center">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>ID</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>CUST_NM</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>SIGNUP_DT</span>
-                  </div>
-                </HoverBox>
-                <div style={{ color: LC.staging.fill }} className="text-lg font-bold">|</div>
-                <HoverBox className="bg-white border-2 rounded-lg px-5 py-3 text-center shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: LC.staging.border }}>
-                  <div className="font-mono text-[11px] font-bold" style={{ color: LC.staging.fill }}>stg_customers</div>
-                  <div className="flex gap-1.5 mt-2 justify-center">
-                    {['customer_id', 'customer_name', 'signed_up_at'].map(c => (
-                      <span key={c} className="text-[9px] px-1.5 py-0.5 rounded font-mono border" style={{ backgroundColor: LC.staging.light, color: LC.staging.fill, borderColor: LC.staging.border }}>{c}</span>
+              <div className="relative" style={{ minHeight: 340 }}>
+                {/* SVG curved connectors (behind cards via absolute positioning) */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
+                  {/* raw_customers → stg_customers (center to center) */}
+                  <path d="M 50% 68 C 50% 100, 50% 110, 50% 140" fill="none" stroke="#c7d2fe" strokeWidth={1.5}>
+                    <animate attributeName="d" values="M 50% 68 C 50% 100, 50% 110, 50% 140" />
+                  </path>
+                </svg>
+                <div className="relative flex flex-col items-center" style={{ gap: 0 }}>
+                  {/* raw_customers card */}
+                  <HoverBox className="bg-white border border-gray-200 rounded-lg px-4 py-2 text-center hover:shadow-md transition-shadow" style={{ borderColor: LC.source.border }}>
+                    <div className="font-mono text-[11px] font-semibold" style={{ color: LC.source.fill }}>raw_customers</div>
+                    <div className="flex gap-1.5 mt-1.5 justify-center">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>ID</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>CUST_NM</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: LC.source.light, color: LC.source.fill }}>SIGNUP_DT</span>
+                    </div>
+                  </HoverBox>
+                  {/* Curved connector: raw → stg */}
+                  <svg width="60" height="36" viewBox="0 0 60 36" className="shrink-0">
+                    <defs>
+                      <marker id="stg-arrow-down" viewBox="0 0 10 10" refX="5" refY="9" markerWidth={5} markerHeight={5} orient="0">
+                        <path d="M 0 0 L 5 10 L 10 0 z" fill="#c7d2fe" />
+                      </marker>
+                    </defs>
+                    <path d="M 30 0 C 30 14, 30 22, 30 36" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#stg-arrow-down)" />
+                  </svg>
+                  {/* stg_customers card */}
+                  <HoverBox className="bg-white border-2 rounded-lg px-5 py-3 text-center shadow-sm hover:shadow-md transition-shadow" style={{ borderColor: LC.staging.border }}>
+                    <div className="font-mono text-[11px] font-bold" style={{ color: LC.staging.fill }}>stg_customers</div>
+                    <div className="flex gap-1.5 mt-2 justify-center">
+                      {['customer_id', 'customer_name', 'signed_up_at'].map(c => (
+                        <span key={c} className="text-[9px] px-1.5 py-0.5 rounded font-mono border" style={{ backgroundColor: LC.staging.light, color: LC.staging.fill, borderColor: LC.staging.border }}>{c}</span>
+                      ))}
+                    </div>
+                  </HoverBox>
+                  {/* Curved fan-out connector: stg → 3 reports */}
+                  <svg width="400" height="40" viewBox="0 0 400 40" className="shrink-0">
+                    <path d="M 200 0 C 200 20, 67 20, 67 40" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#stg-arrow-down)" />
+                    <path d="M 200 0 C 200 16, 200 24, 200 40" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#stg-arrow-down)" />
+                    <path d="M 200 0 C 200 20, 333 20, 333 40" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#stg-arrow-down)" />
+                  </svg>
+                  {/* Report cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg">
+                    {['report_a', 'report_b', 'report_c'].map((name) => (
+                      <HoverBox key={name} className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:shadow-md hover:border-gray-300 transition-shadow">
+                        <div className="font-mono text-[10px] text-gray-700 font-semibold text-center">{name}</div>
+                        <div className="flex flex-wrap gap-1 mt-1.5 justify-center">
+                          {['customer_id', 'customer_name', 'signed_up_at'].map((c) => (
+                            <span key={c} className="text-[8px] px-1.5 py-0.5 rounded font-mono border" style={{ backgroundColor: LC.staging.light, color: LC.staging.fill, borderColor: LC.staging.border }}>{c}</span>
+                          ))}
+                        </div>
+                      </HoverBox>
                     ))}
                   </div>
-                </HoverBox>
-                <div style={{ color: LC.staging.fill }} className="text-lg font-bold">|</div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-lg">
-                  {['report_a', 'report_b', 'report_c'].map((name) => (
-                    <HoverBox key={name} className="bg-white border border-gray-200 rounded-lg px-3 py-2 hover:shadow-md hover:border-gray-300 transition-shadow">
-                      <div className="font-mono text-[10px] text-gray-700 font-semibold text-center">{name}</div>
-                      <div className="flex flex-wrap gap-1 mt-1.5 justify-center">
-                        {['customer_id', 'customer_name', 'signed_up_at'].map((c) => (
-                          <span key={c} className="text-[8px] px-1.5 py-0.5 rounded font-mono border" style={{ backgroundColor: LC.staging.light, color: LC.staging.fill, borderColor: LC.staging.border }}>{c}</span>
-                        ))}
-                      </div>
-                    </HoverBox>
-                  ))}
                 </div>
               </div>
             </div>
@@ -378,10 +412,15 @@ function IntermediateTopic() {
                   </div>
                   {logicBlock}
                 </HoverBox>
-                <div className="flex items-center gap-8">
-                  <span className="text-lg font-bold" style={{ color: LC.intermediate.fill }}>/</span>
-                  <span className="text-lg font-bold" style={{ color: LC.intermediate.fill }}>\</span>
-                </div>
+                <svg width="400" height="40" viewBox="0 0 400 40" className="shrink-0">
+                  <defs>
+                    <marker id="int-arrow" viewBox="0 0 10 10" refX="5" refY="9" markerWidth={5} markerHeight={5} orient="0">
+                      <path d="M 0 0 L 5 10 L 10 0 z" fill="#c7d2fe" />
+                    </marker>
+                  </defs>
+                  <path d="M 200 0 C 200 20, 100 20, 100 40" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#int-arrow)" />
+                  <path d="M 200 0 C 200 20, 300 20, 300 40" fill="none" stroke="#c7d2fe" strokeWidth={1.5} markerEnd="url(#int-arrow)" />
+                </svg>
                 <div className="grid grid-cols-2 gap-4 w-full max-w-xl">
                   {['fct_order_summary', 'fct_customer_orders'].map((name) => (
                     <HoverBox key={name} className="bg-white border rounded-lg p-3 text-center hover:shadow-md transition-shadow" style={{ borderColor: LC.mart.border }}>
