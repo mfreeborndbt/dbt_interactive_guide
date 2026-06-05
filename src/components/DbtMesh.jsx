@@ -72,15 +72,15 @@ const projectColors = ['#6366f1', '#0891b2', '#059669', '#dc2626', '#7c3aed']
 const projectNames = ['analytics', 'marketing', 'finance', 'sales', 'platform']
 
 const certifiedModels = [
-  { name: 'fct_orders', team: 'analytics', desc: 'Completed orders with revenue' },
-  { name: 'fct_revenue', team: 'finance', desc: 'Recognized revenue by period' },
-  { name: 'dim_customers', team: 'platform', desc: 'Customer master with segments' },
-  { name: 'fct_sessions', team: 'marketing', desc: 'Web sessions with attribution' },
-  { name: 'dim_regions', team: 'platform', desc: 'Geographic hierarchy' },
-  { name: 'dim_channels', team: 'platform', desc: 'Channel taxonomy' },
-  { name: 'fct_payments', team: 'finance', desc: 'Payment transactions' },
-  { name: 'dim_dates', team: 'platform', desc: 'Date spine and fiscal calendar' },
-  { name: 'rpt_customer_ltv', team: 'analytics', desc: 'Lifetime value by cohort' },
+  { name: 'fct_orders', team: 'analytics', project: 'sales', desc: 'Completed orders with revenue' },
+  { name: 'fct_revenue', team: 'finance', project: 'finance', desc: 'Recognized revenue by period' },
+  { name: 'dim_customers', team: 'platform', project: 'platform', desc: 'Customer master with segments' },
+  { name: 'fct_sessions', team: 'marketing', project: 'marketing', desc: 'Web sessions with attribution' },
+  { name: 'dim_regions', team: 'platform', project: 'platform', desc: 'Geographic hierarchy' },
+  { name: 'dim_channels', team: 'platform', project: 'platform', desc: 'Channel taxonomy' },
+  { name: 'fct_payments', team: 'finance', project: 'finance', desc: 'Payment transactions' },
+  { name: 'dim_dates', team: 'platform', project: 'platform', desc: 'Date spine and fiscal calendar' },
+  { name: 'rpt_customer_ltv', team: 'analytics', project: 'datascience', desc: 'Lifetime value by cohort' },
 ]
 
 const teamColorMap = {
@@ -89,12 +89,10 @@ const teamColorMap = {
   finance: '#059669',
   sales: '#dc2626',
   platform: '#7c3aed',
-  sales: '#d97706',
-  'data science': '#0ea5e9',
 }
 
 /* ─── Project lineage DAG for "With Mesh" tab ─── */
-function ProjectLineageDAG() {
+function ProjectLineageDAG({ highlightedProject }) {
   const PNW = 250, PNH = 68
   const col0 = 20, col1 = 350, col2 = 680
   const vGap = 16, topPad = 16
@@ -150,19 +148,28 @@ function ProjectLineageDAG() {
           const y2 = to.y + PNH / 2
           const dx = (x2 - x1) * 0.45
           const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
-          return <path key={i} d={d} fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#proj-arrow)" />
+          const edgeActive = !highlightedProject || fromId === highlightedProject || toId === highlightedProject
+          return <path key={i} d={d} fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#proj-arrow)"
+            style={{ transition: 'opacity 0.2s' }} opacity={edgeActive ? 1 : 0.25} />
         })}
 
         {/* Project nodes */}
         {projects.map(p => {
           const badgeW = 34, badgeH = 20, badgeX = p.x + 10, badgeY = p.y + 12
           const dividerY = p.y + 44
+          const isHL = highlightedProject === p.id
           return (
-            <g key={p.id}>
+            <g key={p.id} style={{ transition: 'opacity 0.2s' }} opacity={highlightedProject && !isHL ? 0.4 : 1}>
+              {/* Highlight glow */}
+              {isHL && (
+                <rect x={p.x - 3} y={p.y - 3} width={PNW + 6} height={PNH + 6} rx={10}
+                  fill="none" stroke={p.color} strokeWidth={2} opacity={0.5} />
+              )}
               {/* Shadow */}
               <rect x={p.x + 1} y={p.y + 2} width={PNW} height={PNH} rx={8} fill="#00000008" />
               {/* Card */}
-              <rect x={p.x} y={p.y} width={PNW} height={PNH} rx={8} fill="white" stroke="#e5e7eb" strokeWidth={1} />
+              <rect x={p.x} y={p.y} width={PNW} height={PNH} rx={8} fill="white"
+                stroke={isHL ? p.color : '#e5e7eb'} strokeWidth={isHL ? 1.5 : 1} />
               {/* PRJ badge */}
               <rect x={badgeX} y={badgeY} width={badgeW} height={badgeH} rx={4} fill={p.color + '15'} stroke={p.color + '40'} strokeWidth={0.5} />
               <text x={badgeX + badgeW / 2} y={badgeY + 14} textAnchor="middle" fontSize={8} fontWeight={700} fill={p.color} fontFamily="ui-monospace, monospace">PRJ</text>
@@ -186,6 +193,9 @@ function ModelDiscovery() {
   const [withMesh, setWithMesh] = useState(false)
   const [activeFilter, setActiveFilter] = useState(null)
   const [hoveredCard, setHoveredCard] = useState(null)
+  const highlightedProject = hoveredCard
+    ? (certifiedModels.find(m => m.name === hoveredCard) || {}).project
+    : null
 
   return (
     <div>
@@ -263,7 +273,7 @@ function ModelDiscovery() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Project lineage</span>
               </div>
-              <ProjectLineageDAG />
+              <ProjectLineageDAG highlightedProject={highlightedProject} />
             </div>
             {/* Bottom half: public model cards */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
@@ -1075,15 +1085,15 @@ function WithMeshBreaking({ pushed, setPushed, migratedToV2, setMigratedToV2 }) 
     setPhase('v2created')
     // Step 2: pulse crosses divider (1400ms)
     timeouts.current.push(setTimeout(() => setPhase('pulsing'), 1400))
-    // Step 3: v1 consumer holds steady (2200ms)
-    timeouts.current.push(setTimeout(() => setPhase('v1holds'), 2200))
-    // Step 4: pause to digest v1 stability, then v2 adoption (3600ms)
+    // Step 3: v1 consumer holds steady (3200ms — 1s after pulse ends)
+    timeouts.current.push(setTimeout(() => setPhase('v1holds'), 3200))
+    // Step 4: pause to digest v1 stability, then v2 adoption (4600ms)
     timeouts.current.push(setTimeout(() => {
       setMigratedToV2(true)
       setPhase('v2adopted')
-    }, 3600))
-    // Step 5: resolve (4600ms)
-    timeouts.current.push(setTimeout(() => setPhase('done'), 4600))
+    }, 4600))
+    // Step 5: resolve (5600ms)
+    timeouts.current.push(setTimeout(() => setPhase('done'), 5600))
     return () => timeouts.current.forEach(clearTimeout)
   }, [pushed, setMigratedToV2])
 
