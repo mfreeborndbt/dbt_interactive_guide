@@ -44,47 +44,143 @@ function MeshToggle({ withMesh, setWithMesh }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 const allModels = [
-  { name: 'stg_orders', proj: 0 }, { name: 'stg_customers', proj: 1 }, { name: 'stg_payments', proj: 2 }, { name: 'stg_products', proj: 3 }, { name: 'stg_sessions', proj: 1 },
-  { name: 'stg_events', proj: 4 }, { name: 'stg_refunds', proj: 2 }, { name: 'stg_shipments', proj: 4 }, { name: 'stg_returns', proj: 3 }, { name: 'stg_invoices', proj: 2 },
-  { name: 'stg_employees', proj: 4 }, { name: 'stg_campaigns', proj: 1 }, { name: 'stg_suppliers', proj: 5 }, { name: 'stg_warehouses', proj: 4 }, { name: 'stg_regions', proj: 0 },
-  { name: 'stg_channels', proj: 1 }, { name: 'stg_subscriptions', proj: 2 }, { name: 'stg_page_views', proj: 1 }, { name: 'stg_signups', proj: 3 }, { name: 'stg_tickets', proj: 4 },
+  { name: 'stg_orders', proj: 0 }, { name: 'stg_customers', proj: 1 }, { name: 'stg_payments', proj: 2 }, { name: 'stg_sessions', proj: 1 },
+  { name: 'stg_events', proj: 3 }, { name: 'stg_refunds', proj: 2 }, { name: 'stg_shipments', proj: 3 }, { name: 'stg_invoices', proj: 2 },
+  { name: 'stg_employees', proj: 3 }, { name: 'stg_campaigns', proj: 1 }, { name: 'stg_suppliers', proj: 4 }, { name: 'stg_warehouses', proj: 3 }, { name: 'stg_regions', proj: 0 },
+  { name: 'stg_channels', proj: 1 }, { name: 'stg_subscriptions', proj: 2 }, { name: 'stg_page_views', proj: 1 }, { name: 'stg_tickets', proj: 3 },
   { name: 'int_order_items', proj: 0 }, { name: 'int_customer_ord', proj: 0 }, { name: 'int_payment_agg', proj: 2 }, { name: 'int_session_evt', proj: 1 },
-  { name: 'int_product_sales', proj: 3 }, { name: 'int_revenue_daily', proj: 2 }, { name: 'int_user_activity', proj: 1 }, { name: 'int_refund_sum', proj: 2 },
-  { name: 'int_campaign_perf', proj: 1 }, { name: 'int_supply_chain', proj: 5 },
-  { name: 'fct_orders', proj: 0 }, { name: 'fct_revenue', proj: 2 }, { name: 'fct_sessions', proj: 1 }, { name: 'fct_payments', proj: 2 }, { name: 'fct_shipments', proj: 4 },
-  { name: 'fct_returns', proj: 3 }, { name: 'fct_subscriptions', proj: 2 }, { name: 'fct_invoices', proj: 2 }, { name: 'fct_refunds', proj: 2 }, { name: 'fct_churn', proj: 0 },
-  { name: 'dim_customers', proj: 0 }, { name: 'dim_products', proj: 3 }, { name: 'dim_dates', proj: 5 }, { name: 'dim_regions', proj: 4 }, { name: 'dim_channels', proj: 1 },
-  { name: 'dim_campaigns', proj: 1 }, { name: 'dim_suppliers', proj: 5 }, { name: 'dim_warehouses', proj: 4 }, { name: 'dim_employees', proj: 4 }, { name: 'dim_stores', proj: 3 },
-  { name: 'rpt_daily_revenue', proj: 0 }, { name: 'rpt_weekly_orders', proj: 0 }, { name: 'rpt_customer_ltv', proj: 0 }, { name: 'rpt_product_perf', proj: 3 },
-  { name: 'rpt_channel_mix', proj: 1 }, { name: 'rpt_region_summary', proj: 4 }, { name: 'rpt_cohort_ret', proj: 1 }, { name: 'rpt_inventory', proj: 4 },
+  { name: 'int_revenue_daily', proj: 2 }, { name: 'int_user_activity', proj: 1 }, { name: 'int_refund_sum', proj: 2 },
+  { name: 'int_campaign_perf', proj: 1 }, { name: 'int_supply_chain', proj: 4 },
+  { name: 'fct_orders', proj: 0 }, { name: 'fct_revenue', proj: 2 }, { name: 'fct_sessions', proj: 1 }, { name: 'fct_payments', proj: 2 }, { name: 'fct_shipments', proj: 3 },
+  { name: 'fct_subscriptions', proj: 2 }, { name: 'fct_invoices', proj: 2 }, { name: 'fct_refunds', proj: 2 }, { name: 'fct_churn', proj: 0 },
+  { name: 'dim_customers', proj: 0 }, { name: 'dim_dates', proj: 4 }, { name: 'dim_regions', proj: 3 }, { name: 'dim_channels', proj: 1 },
+  { name: 'dim_campaigns', proj: 1 }, { name: 'dim_suppliers', proj: 4 }, { name: 'dim_warehouses', proj: 3 }, { name: 'dim_employees', proj: 3 },
+  { name: 'rpt_daily_revenue', proj: 0 }, { name: 'rpt_weekly_orders', proj: 0 }, { name: 'rpt_customer_ltv', proj: 0 },
+  { name: 'rpt_channel_mix', proj: 1 }, { name: 'rpt_region_summary', proj: 3 }, { name: 'rpt_cohort_ret', proj: 1 }, { name: 'rpt_inventory', proj: 3 },
   { name: 'rpt_mrr', proj: 2 }, { name: 'rpt_arr_growth', proj: 2 }, { name: 'rpt_funnel', proj: 1 }, { name: 'rpt_exec_summary', proj: 0 },
-  { name: 'exp_finance_dash', proj: 2 }, { name: 'exp_ops_monitor', proj: 4 }, { name: 'exp_marketing_bi', proj: 1 }, { name: 'exp_product_kpi', proj: 3 },
-  { name: 'exp_ceo_report', proj: 0 }, { name: 'exp_board_deck', proj: 5 }, { name: 'snap_customers', proj: 0 }, { name: 'snap_products', proj: 3 },
-  { name: 'stg_contracts', proj: 2 }, { name: 'stg_leads', proj: 1 }, { name: 'stg_opportunities', proj: 1 }, { name: 'stg_accounts', proj: 2 }, { name: 'stg_territories', proj: 4 },
-  { name: 'int_lead_scoring', proj: 1 }, { name: 'int_deal_pipeline', proj: 1 }, { name: 'int_quota_attain', proj: 2 }, { name: 'int_territory_map', proj: 4 }, { name: 'int_forecast_agg', proj: 2 },
-  { name: 'fct_pipeline', proj: 1 }, { name: 'fct_bookings', proj: 2 }, { name: 'fct_renewals', proj: 2 }, { name: 'fct_usage', proj: 3 }, { name: 'fct_support_tickets', proj: 4 },
-  { name: 'dim_accounts', proj: 2 }, { name: 'dim_territories', proj: 4 }, { name: 'dim_segments', proj: 0 }, { name: 'dim_plans', proj: 3 }, { name: 'dim_currencies', proj: 5 },
-  { name: 'rpt_pipeline_vel', proj: 1 }, { name: 'rpt_win_rate', proj: 1 }, { name: 'rpt_nrr', proj: 2 }, { name: 'rpt_usage_trends', proj: 3 }, { name: 'rpt_support_sla', proj: 4 },
-  { name: 'exp_sales_dash', proj: 1 }, { name: 'exp_cs_health', proj: 4 }, { name: 'exp_rev_forecast', proj: 2 }, { name: 'snap_accounts', proj: 2 }, { name: 'snap_pipeline', proj: 1 },
+  { name: 'exp_finance_dash', proj: 2 }, { name: 'exp_ops_monitor', proj: 3 }, { name: 'exp_marketing_bi', proj: 1 },
+  { name: 'exp_ceo_report', proj: 0 }, { name: 'exp_board_deck', proj: 4 }, { name: 'snap_customers', proj: 0 },
+  { name: 'stg_contracts', proj: 2 }, { name: 'stg_leads', proj: 1 }, { name: 'stg_opportunities', proj: 1 }, { name: 'stg_accounts', proj: 2 }, { name: 'stg_territories', proj: 3 },
+  { name: 'int_lead_scoring', proj: 1 }, { name: 'int_deal_pipeline', proj: 1 }, { name: 'int_quota_attain', proj: 2 }, { name: 'int_territory_map', proj: 3 }, { name: 'int_forecast_agg', proj: 2 },
+  { name: 'fct_pipeline', proj: 1 }, { name: 'fct_bookings', proj: 2 }, { name: 'fct_renewals', proj: 2 }, { name: 'fct_support_tickets', proj: 3 },
+  { name: 'dim_accounts', proj: 2 }, { name: 'dim_territories', proj: 3 }, { name: 'dim_segments', proj: 0 }, { name: 'dim_currencies', proj: 4 },
+  { name: 'rpt_pipeline_vel', proj: 1 }, { name: 'rpt_win_rate', proj: 1 }, { name: 'rpt_nrr', proj: 2 }, { name: 'rpt_support_sla', proj: 3 },
+  { name: 'exp_sales_dash', proj: 1 }, { name: 'exp_cs_health', proj: 3 }, { name: 'exp_rev_forecast', proj: 2 }, { name: 'snap_accounts', proj: 2 }, { name: 'snap_pipeline', proj: 1 },
 ]
 
-const projectColors = ['#6366f1', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed']
-const projectNames = ['analytics', 'marketing', 'finance', 'product', 'ops', 'platform']
+const projectColors = ['#6366f1', '#0891b2', '#059669', '#dc2626', '#7c3aed']
+const projectNames = ['analytics', 'marketing', 'finance', 'sales', 'platform']
 
 const certifiedModels = [
   { name: 'fct_orders', team: 'analytics', desc: 'Completed orders with revenue' },
   { name: 'fct_revenue', team: 'finance', desc: 'Recognized revenue by period' },
-  { name: 'dim_customers', team: 'analytics', desc: 'Customer master with segments' },
-  { name: 'dim_products', team: 'product', desc: 'Product catalog with categories' },
+  { name: 'dim_customers', team: 'platform', desc: 'Customer master with segments' },
   { name: 'fct_sessions', team: 'marketing', desc: 'Web sessions with attribution' },
-  { name: 'fct_subscriptions', team: 'finance', desc: 'Active subscription state' },
-  { name: 'dim_regions', team: 'ops', desc: 'Geographic hierarchy' },
-  { name: 'fct_shipments', team: 'ops', desc: 'Shipment tracking and SLAs' },
-  { name: 'dim_channels', team: 'marketing', desc: 'Channel taxonomy' },
+  { name: 'dim_regions', team: 'platform', desc: 'Geographic hierarchy' },
+  { name: 'dim_channels', team: 'platform', desc: 'Channel taxonomy' },
   { name: 'fct_payments', team: 'finance', desc: 'Payment transactions' },
   { name: 'dim_dates', team: 'platform', desc: 'Date spine and fiscal calendar' },
   { name: 'rpt_customer_ltv', team: 'analytics', desc: 'Lifetime value by cohort' },
 ]
+
+const teamColorMap = {
+  analytics: '#6366f1',
+  marketing: '#0891b2',
+  finance: '#059669',
+  sales: '#dc2626',
+  platform: '#7c3aed',
+  sales: '#d97706',
+  'data science': '#0ea5e9',
+}
+
+/* ─── Project lineage DAG for "With Mesh" tab ─── */
+function ProjectLineageDAG() {
+  const PNW = 250, PNH = 68
+  const col0 = 20, col1 = 350, col2 = 680
+  const vGap = 16, topPad = 16
+  const midY0 = topPad
+  const midY1 = midY0 + PNH + vGap
+  const midY2 = midY1 + PNH + vGap
+  const midCenter = midY0 + (midY2 + PNH - midY0) / 2
+  const sideY = midCenter - PNH / 2
+  const svgW = col2 + PNW + 20
+  const svgH = midY2 + PNH + topPad
+
+  const projects = [
+    { id: 'platform', label: 'Platform | Core Foundations', models: 4, x: col0, y: sideY, color: '#7c3aed' },
+    { id: 'finance', label: 'Finance | Revenue', models: 2, x: col1, y: midY0, color: '#059669' },
+    { id: 'marketing', label: 'Marketing | Web & Channels', models: 1, x: col1, y: midY1, color: '#0891b2' },
+    { id: 'sales', label: 'Sales | Orders', models: 1, x: col1, y: midY2, color: '#d97706' },
+    { id: 'datascience', label: 'Data Science | Advanced Analytics', models: 1, x: col2, y: sideY, color: '#0ea5e9' },
+  ]
+
+  const edges = [
+    ['platform', 'finance'],
+    ['platform', 'marketing'],
+    ['platform', 'sales'],
+    ['marketing', 'datascience'],
+    ['sales', 'datascience'],
+  ]
+
+  const projectMap = {}
+  projects.forEach(p => { projectMap[p.id] = p })
+
+  return (
+    <div className="overflow-x-auto">
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto">
+        <defs>
+          <pattern id="proj-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+            <circle cx="8" cy="8" r="0.7" fill="#e5e7eb" />
+          </pattern>
+          <marker id="proj-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth={5} markerHeight={5} orient="auto-start-auto">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#cbd5e1" />
+          </marker>
+        </defs>
+
+        {/* Dotted grid background */}
+        <rect width={svgW} height={svgH} fill="url(#proj-grid)" rx={8} />
+
+        {/* Edges (cubic bezier) */}
+        {edges.map(([fromId, toId], i) => {
+          const from = projectMap[fromId]
+          const to = projectMap[toId]
+          const x1 = from.x + PNW
+          const y1 = from.y + PNH / 2
+          const x2 = to.x
+          const y2 = to.y + PNH / 2
+          const dx = (x2 - x1) * 0.45
+          const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
+          return <path key={i} d={d} fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#proj-arrow)" />
+        })}
+
+        {/* Project nodes */}
+        {projects.map(p => {
+          const badgeW = 34, badgeH = 20, badgeX = p.x + 10, badgeY = p.y + 12
+          const dividerY = p.y + 44
+          return (
+            <g key={p.id}>
+              {/* Shadow */}
+              <rect x={p.x + 1} y={p.y + 2} width={PNW} height={PNH} rx={8} fill="#00000008" />
+              {/* Card */}
+              <rect x={p.x} y={p.y} width={PNW} height={PNH} rx={8} fill="white" stroke="#e5e7eb" strokeWidth={1} />
+              {/* PRJ badge */}
+              <rect x={badgeX} y={badgeY} width={badgeW} height={badgeH} rx={4} fill={p.color + '15'} stroke={p.color + '40'} strokeWidth={0.5} />
+              <text x={badgeX + badgeW / 2} y={badgeY + 14} textAnchor="middle" fontSize={8} fontWeight={700} fill={p.color} fontFamily="ui-monospace, monospace">PRJ</text>
+              {/* Title */}
+              <text x={p.x + 52} y={p.y + 26} fontSize={10.5} fontWeight={600} fill="#374151" fontFamily="system-ui, sans-serif">{p.label}</text>
+              {/* Divider */}
+              <line x1={p.x} y1={dividerY} x2={p.x + PNW} y2={dividerY} stroke="#f3f4f6" strokeWidth={1} />
+              {/* Public Models count */}
+              <text x={p.x + 10} y={p.y + 59} fontSize={10} fontWeight={500} fill="#9ca3af" fontFamily="system-ui, sans-serif">
+                {p.models} Public Model{p.models !== 1 ? 's' : ''}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
 
 function ModelDiscovery() {
   const [withMesh, setWithMesh] = useState(false)
@@ -162,14 +258,21 @@ function ModelDiscovery() {
               <h3 className="text-lg font-bold text-gray-900">Public, certified models</h3>
               <p className="text-sm text-gray-500 mt-1">Build on a curated set of public models that teams own and certify for cross-team use.</p>
             </div>
+            {/* Top half: project lineage DAG */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Project lineage</span>
+              </div>
+              <ProjectLineageDAG />
+            </div>
+            {/* Bottom half: public model cards */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">12 certified models, maintained by different teams</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">9 certified models, maintained by different teams</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {certifiedModels.map((m) => {
-                  const teamIdx = projectNames.indexOf(m.team)
-                  const color = projectColors[teamIdx] || '#6b7280'
+                  const color = teamColorMap[m.team] || '#6b7280'
                   const isHovered = hoveredCard === m.name
                   return (
                     <motion.div
