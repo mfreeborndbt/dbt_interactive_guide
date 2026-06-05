@@ -203,7 +203,7 @@ function SourcesTopic() {
                     { id: 'stg_orders', label: 'stg_orders', x: 190, y: 20, color: LC.staging.fill, w: 100, h: NH },
                     { id: 'stg_customers', label: 'stg_customers', x: 190, y: 62, color: LC.staging.fill, w: 100, h: NH },
                     { id: 'stg_payments', label: 'stg_payments', x: 190, y: 104, color: LC.staging.fill, w: 100, h: NH },
-                    { id: 'fct_orders', label: 'fct_orders', x: 380, y: 55, color: LC.mart.fill, w: 100, h: NH },
+                    { id: 'fct_orders', label: 'fct_orders', x: 380, y: 62, color: LC.mart.fill, w: 100, h: NH },
                   ]}
                   edges={[
                     ['raw_orders', 'stg_orders'], ['raw_customers', 'stg_customers'], ['raw_payments', 'stg_payments'],
