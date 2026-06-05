@@ -92,7 +92,7 @@ const teamColorMap = {
 }
 
 /* ─── Project lineage DAG for "With Mesh" tab ─── */
-function ProjectLineageDAG({ highlightedProject }) {
+function ProjectLineageDAG({ highlightedProject, onHoverProject }) {
   const PNW = 250, PNH = 68
   const col0 = 20, col1 = 350, col2 = 680
   const vGap = 16, topPad = 16
@@ -159,7 +159,9 @@ function ProjectLineageDAG({ highlightedProject }) {
           const dividerY = p.y + 44
           const isHL = highlightedProject === p.id
           return (
-            <g key={p.id} style={{ transition: 'opacity 0.2s' }} opacity={highlightedProject && !isHL ? 0.4 : 1}>
+            <g key={p.id} style={{ transition: 'opacity 0.2s', cursor: 'pointer' }} opacity={highlightedProject && !isHL ? 0.4 : 1}
+              onMouseEnter={() => onHoverProject && onHoverProject(p.id)}
+              onMouseLeave={() => onHoverProject && onHoverProject(null)}>
               {/* Highlight glow */}
               {isHL && (
                 <rect x={p.x - 3} y={p.y - 3} width={PNW + 6} height={PNH + 6} rx={10}
@@ -193,9 +195,10 @@ function ModelDiscovery() {
   const [withMesh, setWithMesh] = useState(false)
   const [activeFilter, setActiveFilter] = useState(null)
   const [hoveredCard, setHoveredCard] = useState(null)
+  const [hoveredProject, setHoveredProject] = useState(null)
   const highlightedProject = hoveredCard
     ? (certifiedModels.find(m => m.name === hoveredCard) || {}).project
-    : null
+    : hoveredProject
 
   return (
     <div>
@@ -273,7 +276,7 @@ function ModelDiscovery() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Project lineage</span>
               </div>
-              <ProjectLineageDAG highlightedProject={highlightedProject} />
+              <ProjectLineageDAG highlightedProject={highlightedProject} onHoverProject={setHoveredProject} />
             </div>
             {/* Bottom half: public model cards */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
@@ -284,12 +287,13 @@ function ModelDiscovery() {
                 {certifiedModels.map((m) => {
                   const color = teamColorMap[m.team] || '#6b7280'
                   const isHovered = hoveredCard === m.name
+                  const isDimmed = hoveredProject && m.project !== hoveredProject && !isHovered
                   return (
                     <motion.div
                       key={m.name}
                       onMouseEnter={() => setHoveredCard(m.name)}
                       onMouseLeave={() => setHoveredCard(null)}
-                      animate={{ y: isHovered ? -3 : 0 }}
+                      animate={{ y: isHovered ? -3 : 0, opacity: isDimmed ? 0.4 : 1 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                       className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col gap-1.5 cursor-default"
                       style={{
