@@ -72,7 +72,7 @@ const projectColors = ['#6366f1', '#0891b2', '#059669', '#dc2626', '#7c3aed']
 const projectNames = ['analytics', 'marketing', 'finance', 'sales', 'platform']
 
 const certifiedModels = [
-  { name: 'fct_orders', team: 'analytics', project: 'sales', desc: 'Completed orders with revenue' },
+  { name: 'fct_orders', team: 'sales', project: 'sales', desc: 'Completed orders with revenue' },
   { name: 'fct_revenue', team: 'finance', project: 'finance', desc: 'Recognized revenue by period' },
   { name: 'dim_customers', team: 'platform', project: 'platform', desc: 'Customer master with segments' },
   { name: 'fct_sessions', team: 'marketing', project: 'marketing', desc: 'Web sessions with attribution' },
