@@ -2088,15 +2088,7 @@ function DDLVisual({ showDbt }) {
 );
 
 -- ... repeat this block for every remaining day
--- in the batch window (Day 3, Day 4, etc.)
-
--- You are responsible for:
---   * Schema creation and migrations
---   * Computing batch start/end boundaries
---   * Late-arriving data reprocessing
---   * Retry logic per batch on failure
---   * Transaction management
---   * Warehouse permissions and grants`}</pre>
+-- in the batch window (Day 3, Day 4, etc.)`}</pre>
         </div>
       </div>
     )
@@ -2114,7 +2106,6 @@ function DDLVisual({ showDbt }) {
     incremental_strategy='microbatch',
     event_time='order_date',
     batch_size='day',
-    begin='2024-01-01',
   )
 }}`}</pre>
           </div>
@@ -2129,7 +2120,6 @@ function DDLVisual({ showDbt }) {
             <div><span className="text-blue-600">FROM</span> <span className="text-emerald-600 font-bold">{"{{ ref('stg_orders') }}"}</span> o</div>
           </div>
         </div>
-        <p className="text-gray-500 text-[10px] mt-3">dbt reads event_time and automatically generates the per-batch windows, the merge, late-arriving reprocessing, retries, and permissions. No is_incremental() block, no manual date math.</p>
       </div>
     </div>
   )
