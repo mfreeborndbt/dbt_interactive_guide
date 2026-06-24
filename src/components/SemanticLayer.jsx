@@ -1,13 +1,15 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const tabs = [
-  { key: 'how', label: 'How It Works' },
+  { key: 'what', label: 'What It Is' },
   { key: 'problem', label: 'Problem It Solves' },
+  { key: 'how', label: 'How It Works' },
   { key: 'config', label: 'How It\'s Configured' },
 ]
 
 const tabDescs = {
+  what: 'A governed catalog of metrics and semantic models on top of your dbt DAG, queryable by humans and AI alike.',
   how: 'The Semantic Layer translates simple questions into correct SQL through a governed metrics catalog.',
   problem: 'Without a Semantic Layer, metrics live everywhere and nowhere. With one, every consumer gets the same answer.',
   config: 'Define your metrics alongside your models. Same repo, same review process, same CI pipeline.',
@@ -1101,6 +1103,436 @@ function WithSemanticLayer() {
   )
 }
 
+/* ─── Tab 0: What It Is ─── */
+
+// Layout: 18px reserved at top for the band caption, then nodes start at y=38/98.
+// Columns at x=10, 160, 310, 460, 620, 780. Node size 140x32 (inlined to avoid TDZ).
+const _NW = 140, _NH = 32
+const whatDagNodes = [
+  { id: 'raw_orders', label: 'raw_orders', type: 'source', x: 10, y: 38 },
+  { id: 'raw_customers', label: 'raw_customers', type: 'source', x: 10, y: 98 },
+  { id: 'stg_orders_w', label: 'stg_orders', type: 'staging', x: 160, y: 38 },
+  { id: 'stg_customers_w', label: 'stg_customers', type: 'staging', x: 160, y: 98 },
+  { id: 'int_order_items_w', label: 'int_order_items', type: 'intermediate', x: 310, y: 38 },
+  { id: 'fct_orders_w', label: 'fct_orders', type: 'mart', x: 460, y: 38 },
+  { id: 'dim_customers_w', label: 'dim_customers', type: 'mart', x: 460, y: 98 },
+  { id: 'sem_orders_w', label: 'sem_orders', type: 'semantic', x: 620, y: 38 },
+  { id: 'sem_customers_w', label: 'sem_customers', type: 'semantic', x: 620, y: 98 },
+  { id: 'total_revenue', label: 'total_revenue', type: 'metric', x: 780, y: 28 },
+  { id: 'total_profit', label: 'total_profit', type: 'metric', x: 780, y: 68 },
+  { id: 'total_customers', label: 'total_customers', type: 'metric', x: 780, y: 108 },
+]
+
+const whatDagEdges = [
+  { from: 'raw_orders', to: 'stg_orders_w' },
+  { from: 'raw_customers', to: 'stg_customers_w' },
+  { from: 'stg_orders_w', to: 'int_order_items_w' },
+  { from: 'stg_customers_w', to: 'dim_customers_w' },
+  { from: 'int_order_items_w', to: 'fct_orders_w' },
+  { from: 'fct_orders_w', to: 'sem_orders_w', dashed: true },
+  { from: 'dim_customers_w', to: 'sem_customers_w', dashed: true },
+  { from: 'sem_orders_w', to: 'total_revenue' },
+  { from: 'sem_orders_w', to: 'total_profit' },
+  { from: 'sem_customers_w', to: 'total_profit' },
+  { from: 'sem_customers_w', to: 'total_customers' },
+]
+
+// Compute band from the sem + metric node bounding box + padding.
+// Caption (14px) sits above the band rect, so band.y already has room from the node shift.
+const _semMetricNodes = whatDagNodes.filter(n => n.type === 'semantic' || n.type === 'metric')
+const _pad = 18
+const _bandX = Math.min(..._semMetricNodes.map(n => n.x)) - _pad
+const _bandY = Math.min(..._semMetricNodes.map(n => n.y)) - _pad
+const _bandR = Math.max(..._semMetricNodes.map(n => n.x + _NW)) + _pad
+const _bandB = Math.max(..._semMetricNodes.map(n => n.y + _NH)) + _pad
+const whatDagBoundary = {
+  x: _bandX,
+  y: _bandY,
+  width: _bandR - _bandX,
+  height: _bandB - _bandY,
+}
+
+// viewBox sized to include everything: left margin, all nodes, band + right margin, caption, bottom labels
+const _vbWidth = _bandR + 12   // 12px right margin after the band
+const _vbHeight = _bandB + 30  // room for bottom "Models" label
+
+// "Models" label centered under model columns (x=10..600), "Semantic Layer" is the band caption
+const whatDagLabels = [
+  { text: 'Models', x: 305, y: _vbHeight - 6 },
+]
+
+const mcpSteps = ['Listing metrics', 'Listing dimensions', 'Querying metric']
+
+const metricsTableRows = [
+  { name: 'total_revenue', type: 'simple', typeColor: 'bg-blue-100 text-blue-700', desc: 'Total revenue across all orders.' },
+  { name: 'total_expense', type: 'simple', typeColor: 'bg-blue-100 text-blue-700', desc: 'Total expense aggregated from supplier costs.' },
+  { name: 'total_profit', type: 'derived', typeColor: 'bg-purple-100 text-purple-700', desc: 'Revenue minus expense.' },
+  { name: 'total_orders', type: 'simple', typeColor: 'bg-blue-100 text-blue-700', desc: 'Count of orders placed.' },
+  { name: 'average_order_value', type: 'ratio', typeColor: 'bg-amber-100 text-amber-700', desc: 'Revenue divided by order count.' },
+  { name: 'total_customers', type: 'simple', typeColor: 'bg-blue-100 text-blue-700', desc: 'Count of unique customers.' },
+]
+
+const presetQuestions = [
+  {
+    q: 'What was revenue by region last quarter?',
+    resolution: { metric: 'total_revenue', groupBy: 'region', time: 'last quarter' },
+    headers: ['Region', 'Revenue'],
+    rows: [['West', '$2.4M'], ['East', '$1.8M'], ['Central', '$1.2M']],
+  },
+  {
+    q: 'How many orders did we have by month this year?',
+    resolution: { metric: 'total_orders', groupBy: 'month', time: 'this year' },
+    headers: ['Month', 'Orders'],
+    rows: [['Jan', '4,218'], ['Feb', '3,871'], ['Mar', '4,502'], ['Apr', '4,105'], ['May', '4,650'], ['Jun', '4,320']],
+  },
+  {
+    q: 'What is profit by customer segment?',
+    resolution: { metric: 'total_profit', groupBy: 'customer_segment', time: 'all time' },
+    headers: ['Segment', 'Profit'],
+    rows: [['Enterprise', '$8.2M'], ['Mid-Market', '$4.6M'], ['SMB', '$2.1M']],
+  },
+]
+
+const builderResults = {
+  'total_revenue|region': { headers: ['Region', 'Revenue'], rows: [['West', '$2.4M'], ['East', '$1.8M'], ['Central', '$1.2M']] },
+  'total_revenue|order_status': { headers: ['Status', 'Revenue'], rows: [['Completed', '$4.2M'], ['Pending', '$0.8M'], ['Returned', '$0.4M']] },
+  'total_revenue|month': { headers: ['Month', 'Revenue'], rows: [['Jan', '$0.9M'], ['Feb', '$0.8M'], ['Mar', '$1.0M'], ['Apr', '$0.9M'], ['May', '$1.1M'], ['Jun', '$0.7M']] },
+  'total_revenue|customer_segment': { headers: ['Segment', 'Revenue'], rows: [['Enterprise', '$12.4M'], ['Mid-Market', '$6.8M'], ['SMB', '$3.2M']] },
+  'total_expense|region': { headers: ['Region', 'Expense'], rows: [['West', '$1.6M'], ['East', '$1.2M'], ['Central', '$0.8M']] },
+  'total_expense|order_status': { headers: ['Status', 'Expense'], rows: [['Completed', '$2.8M'], ['Pending', '$0.5M'], ['Returned', '$0.3M']] },
+  'total_expense|month': { headers: ['Month', 'Expense'], rows: [['Jan', '$0.6M'], ['Feb', '$0.5M'], ['Mar', '$0.7M'], ['Apr', '$0.6M'], ['May', '$0.7M'], ['Jun', '$0.5M']] },
+  'total_expense|customer_segment': { headers: ['Segment', 'Expense'], rows: [['Enterprise', '$4.2M'], ['Mid-Market', '$2.2M'], ['SMB', '$1.1M']] },
+  'total_profit|region': { headers: ['Region', 'Profit'], rows: [['West', '$0.8M'], ['East', '$0.6M'], ['Central', '$0.4M']] },
+  'total_profit|order_status': { headers: ['Status', 'Profit'], rows: [['Completed', '$1.4M'], ['Pending', '$0.3M'], ['Returned', '$0.1M']] },
+  'total_profit|month': { headers: ['Month', 'Profit'], rows: [['Jan', '$0.3M'], ['Feb', '$0.3M'], ['Mar', '$0.3M'], ['Apr', '$0.3M'], ['May', '$0.4M'], ['Jun', '$0.2M']] },
+  'total_profit|customer_segment': { headers: ['Segment', 'Profit'], rows: [['Enterprise', '$8.2M'], ['Mid-Market', '$4.6M'], ['SMB', '$2.1M']] },
+  'total_orders|region': { headers: ['Region', 'Orders'], rows: [['West', '9,840'], ['East', '7,620'], ['Central', '5,206']] },
+  'total_orders|order_status': { headers: ['Status', 'Orders'], rows: [['Completed', '18,420'], ['Pending', '2,640'], ['Returned', '1,606']] },
+  'total_orders|month': { headers: ['Month', 'Orders'], rows: [['Jan', '4,218'], ['Feb', '3,871'], ['Mar', '4,502'], ['Apr', '4,105'], ['May', '4,650'], ['Jun', '4,320']] },
+  'total_orders|customer_segment': { headers: ['Segment', 'Orders'], rows: [['Enterprise', '10,200'], ['Mid-Market', '7,500'], ['SMB', '4,966']] },
+  'average_order_value|region': { headers: ['Region', 'AOV'], rows: [['West', '$244'], ['East', '$236'], ['Central', '$230']] },
+  'average_order_value|order_status': { headers: ['Status', 'AOV'], rows: [['Completed', '$228'], ['Pending', '$303'], ['Returned', '$249']] },
+  'average_order_value|month': { headers: ['Month', 'AOV'], rows: [['Jan', '$213'], ['Feb', '$207'], ['Mar', '$222'], ['Apr', '$219'], ['May', '$237'], ['Jun', '$162']] },
+  'average_order_value|customer_segment': { headers: ['Segment', 'AOV'], rows: [['Enterprise', '$1,216'], ['Mid-Market', '$907'], ['SMB', '$645']] },
+  'total_customers|region': { headers: ['Region', 'Customers'], rows: [['West', '3,420'], ['East', '2,860'], ['Central', '1,940']] },
+  'total_customers|order_status': { headers: ['Status', 'Customers'], rows: [['Active', '6,120'], ['Churned', '2,100']] },
+  'total_customers|month': { headers: ['Month', 'Customers'], rows: [['Jan', '1,205'], ['Feb', '1,180'], ['Mar', '1,302'], ['Apr', '1,260'], ['May', '1,380'], ['Jun', '1,340']] },
+  'total_customers|customer_segment': { headers: ['Segment', 'Customers'], rows: [['Enterprise', '1,240'], ['Mid-Market', '2,860'], ['SMB', '4,120']] },
+}
+
+function StyledSelect({ value, onChange, options, mono = true }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const handleKey = (e) => {
+    if (e.key === 'Escape') { setOpen(false); return }
+    if (!open && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) { e.preventDefault(); setOpen(true); return }
+    if (!open) return
+    const idx = options.indexOf(value)
+    if (e.key === 'ArrowDown') { e.preventDefault(); onChange(options[Math.min(idx + 1, options.length - 1)]) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); onChange(options[Math.max(idx - 1, 0)]) }
+    else if (e.key === 'Enter') { setOpen(false) }
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        onKeyDown={handleKey}
+        className={`w-full flex items-center justify-between gap-1 text-[12px] ${mono ? 'font-mono' : ''} bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 hover:border-gray-300 focus:outline-none focus:border-gray-400 transition-colors`}
+      >
+        <span className="truncate">{value}</span>
+        <svg className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+          {options.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { onChange(opt); setOpen(false) }}
+              className={`w-full text-left px-2.5 py-1.5 text-[12px] ${mono ? 'font-mono' : ''} flex items-center justify-between gap-2 transition-colors ${
+                opt === value ? 'bg-gray-50 text-gray-900 font-semibold' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="truncate">{opt}</span>
+              {opt === value && <span className="text-emerald-500 text-[10px] shrink-0">{'\u2713'}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ResultsTable({ headers, rows }) {
+  return (
+    <table className="w-full text-left border-collapse">
+      <thead>
+        <tr className="border-b border-gray-200">
+          {headers.map(h => (
+            <th key={h} className={`text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-1.5 ${h === headers[headers.length - 1] ? 'text-right' : ''}`}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i} className="border-b border-gray-100">
+            {row.map((cell, j) => (
+              <td key={j} className={`text-[12px] py-1.5 ${j === row.length - 1 ? 'text-right font-mono font-semibold text-gray-700' : 'text-gray-600'}`}>{cell}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function WhatItIs() {
+  const [catalogView, setCatalogView] = useState('lineage')
+  // LLM simulator state
+  const [selectedPreset, setSelectedPreset] = useState(0)
+  const [llmRunning, setLlmRunning] = useState(false)
+  const [llmStep, setLlmStep] = useState(-1) // -1=idle, 0-2=steps, 3=done
+  const [llmDone, setLlmDone] = useState(false)
+  const timersRef = useRef([])
+  // Builder state
+  const [builderMetric, setBuilderMetric] = useState('total_revenue')
+  const [builderGroup, setBuilderGroup] = useState('region')
+  const [builderResult, setBuilderResult] = useState(null)
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(t => clearTimeout(t))
+    timersRef.current = []
+  }, [])
+
+  const runLlm = useCallback(() => {
+    if (selectedPreset === null) return
+    clearTimers()
+    setLlmRunning(true)
+    setLlmStep(0)
+    setLlmDone(false)
+
+    // Check reduced motion
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReduced) {
+      setLlmStep(3)
+      setLlmRunning(false)
+      setLlmDone(true)
+      return
+    }
+
+    const t1 = setTimeout(() => setLlmStep(1), 800)
+    const t2 = setTimeout(() => setLlmStep(2), 1600)
+    const t3 = setTimeout(() => {
+      setLlmStep(3)
+      setLlmRunning(false)
+      setLlmDone(true)
+    }, 2400)
+    timersRef.current = [t1, t2, t3]
+  }, [selectedPreset, clearTimers])
+
+  const selectPreset = (i) => {
+    clearTimers()
+    setSelectedPreset(i)
+    setLlmRunning(false)
+    setLlmStep(-1)
+    setLlmDone(false)
+  }
+
+  const runBuilder = () => {
+    const key = `${builderMetric}|${builderGroup}`
+    setBuilderResult(builderResults[key] || { headers: [builderGroup, builderMetric], rows: [['(all)', '...']] })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* TOP HALF: Catalog toggle */}
+      <div>
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setCatalogView('lineage')}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                catalogView === 'lineage' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Lineage
+            </button>
+            <button
+              onClick={() => setCatalogView('metrics')}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                catalogView === 'metrics' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Metrics
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {catalogView === 'lineage' ? (
+            <motion.div key="lineage" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.25 }}>
+              <DagSvg nodes={whatDagNodes} edges={whatDagEdges} width={_vbWidth} height={_vbHeight} labels={whatDagLabels} boundary={whatDagBoundary} />
+            </motion.div>
+          ) : (
+            <motion.div key="metrics" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.25 }}>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-300">
+                      <th className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-2 pr-4">Name</th>
+                      <th className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-2 pr-4">Type</th>
+                      <th className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-2">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metricsTableRows.map(m => (
+                      <tr key={m.name} className="border-b border-gray-100">
+                        <td className="font-mono text-[12px] text-gray-700 py-2 pr-4 font-semibold">{m.name}</td>
+                        <td className="py-2 pr-4"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.typeColor}`}>{m.type}</span></td>
+                        <td className="text-[12px] text-gray-500 py-2">{m.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* BOTTOM HALF: Two simulators */}
+      <div>
+        <p className="text-sm text-gray-500 text-center mb-4">Query metrics through LLMs, spreadsheets, BI tools, and more</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Left: LLM simulator */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-3">Ask in natural language</p>
+            <div className="flex flex-col gap-2 mb-3">
+              {presetQuestions.map((pq, i) => (
+                <button
+                  key={i}
+                  onClick={() => selectPreset(i)}
+                  className={`text-left text-[12px] px-3 py-2 rounded-lg border transition-all duration-200 ${
+                    selectedPreset === i
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  &ldquo;{pq.q}&rdquo;
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={runLlm}
+                disabled={llmRunning}
+                className={`px-4 py-1.5 text-[12px] font-medium rounded-lg transition-colors ${
+                  llmRunning
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-gray-900 text-white hover:bg-gray-800'
+                }`}
+              >
+                Run
+              </button>
+            </div>
+
+            {/* Step checklist */}
+            {llmStep >= 0 && (
+              <div className="mb-3 space-y-1.5">
+                {mcpSteps.map((step, i) => {
+                  const isDone = llmStep > i
+                  const isActive = llmStep === i && !llmDone
+                  return (
+                    <div key={step} className="flex items-center gap-2 text-[11px]">
+                      {isDone ? (
+                        <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] font-bold shrink-0">{'\u2713'}</span>
+                      ) : isActive ? (
+                        <span className="w-4 h-4 rounded-full bg-indigo-100 shrink-0 flex items-center justify-center">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                        </span>
+                      ) : (
+                        <span className="w-4 h-4 rounded-full bg-gray-100 shrink-0" />
+                      )}
+                      <span className={isDone ? 'text-gray-400' : isActive ? 'text-indigo-700 font-medium' : 'text-gray-400'}>{step}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {llmDone && selectedPreset !== null && (
+                <motion.div key={`result-${selectedPreset}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+                  <div className="mb-3">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Resolved to</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(presetQuestions[selectedPreset].resolution).map(([k, v]) => (
+                        <span key={k} className="text-[10px] font-mono bg-white border border-gray-200 rounded px-2 py-0.5 text-gray-600">
+                          <span className="text-gray-400">{k}:</span> {v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <ResultsTable headers={presetQuestions[selectedPreset].headers} rows={presetQuestions[selectedPreset].rows} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right: Metric builder */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-3">Build it yourself</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex-1 min-w-[120px]">
+                <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">Metric</label>
+                <StyledSelect
+                  value={builderMetric}
+                  onChange={v => { setBuilderMetric(v); setBuilderResult(null) }}
+                  options={metricsTableRows.map(m => m.name)}
+                />
+              </div>
+              <div className="flex-1 min-w-[120px]">
+                <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">Group by</label>
+                <StyledSelect
+                  value={builderGroup}
+                  onChange={v => { setBuilderGroup(v); setBuilderResult(null) }}
+                  options={['region', 'order_status', 'month', 'customer_segment']}
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={runBuilder}
+                  className="px-4 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Run
+                </button>
+              </div>
+            </div>
+            <AnimatePresence mode="wait">
+              {builderResult && (
+                <motion.div key={`${builderMetric}-${builderGroup}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+                  <ResultsTable headers={builderResult.headers} rows={builderResult.rows} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Tab 3: How It's Configured ─── */
 
 // DAG constants (matching StateAwareOrchestration style)
@@ -1108,6 +1540,7 @@ const cfgNodeW = 140
 const cfgNodeH = 32
 
 const cfgTypeColors = {
+  source: { bg: '#eef2ff', border: '#a5b4fc', text: '#3730a3' },
   staging: { bg: '#dbeafe', border: '#93c5fd', text: '#1e3a5f' },
   intermediate: { bg: '#dbeafe', border: '#93c5fd', text: '#1e3a5f' },
   mart: { bg: '#dbeafe', border: '#93c5fd', text: '#1e3a5f' },
@@ -1157,11 +1590,32 @@ const metricEdges = [
 ]
 
 // Shared DAG renderer with hover support
-function DagSvg({ nodes, edges, width, height, labels, nodeW = cfgNodeW, nodeH = cfgNodeH }) {
+function DagSvg({ nodes, edges, width, height, labels, nodeW = cfgNodeW, nodeH = cfgNodeH, boundary }) {
   const [hovered, setHovered] = useState(null)
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+        {boundary && (
+          <g>
+            {/* Fill (lowest layer) */}
+            <rect
+              x={boundary.x} y={boundary.y} width={boundary.width} height={boundary.height}
+              rx={14} fill="#f3f0ff" fillOpacity={0.45} stroke="none"
+            />
+            {/* Dashed border */}
+            <rect
+              x={boundary.x} y={boundary.y} width={boundary.width} height={boundary.height}
+              rx={14} fill="none" stroke="#d4d4d8" strokeWidth={1.5} strokeDasharray="4 3"
+            />
+            {/* Caption: inset inside top-left padding, above the nodes */}
+            <text
+              x={boundary.x + 12} y={boundary.y + 13}
+              fontSize={9} fill="#7c7c8a" fontWeight={600} letterSpacing={0.3}
+            >
+              Semantic Layer
+            </text>
+          </g>
+        )}
         {edges.map((edge) => {
           const from = nodes.find(n => n.id === edge.from)
           const to = nodes.find(n => n.id === edge.to)
@@ -1803,7 +2257,7 @@ function HowItsConfigured() {
 
 /* ─── Main Component ─── */
 export default function SemanticLayer() {
-  const [activeTab, setActiveTab] = useState('how')
+  const [activeTab, setActiveTab] = useState('what')
 
   return (
     <div className="section-container py-8">
@@ -1836,6 +2290,11 @@ export default function SemanticLayer() {
 
       <div className="bg-white border border-gray-200/60 rounded-2xl p-6 shadow-sm">
         <AnimatePresence mode="wait">
+          {activeTab === 'what' && (
+            <motion.div key="what" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
+              <WhatItIs />
+            </motion.div>
+          )}
           {activeTab === 'how' && (
             <motion.div key="how" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
               <HowItWorks />
