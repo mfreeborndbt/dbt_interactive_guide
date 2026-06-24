@@ -446,7 +446,6 @@ export default function ProjectArchitectureVisual() {
   return (
     <div className="w-full space-y-8">
       <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">How environments interact with a dbt project</h3>
         <p className="text-gray-600 mb-6">
           dbt projects follow a standard architecture. Data flows from raw sources through layers of transformation, getting cleaner and more business-focused at each stage.
         </p>
