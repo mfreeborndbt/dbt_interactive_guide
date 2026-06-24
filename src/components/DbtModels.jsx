@@ -2006,9 +2006,15 @@ function DDLVisual({ showDbt }) {
   if (!showDbt) {
     return (
       <div className="space-y-3">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-red-600 text-xs font-semibold mb-2">deploy_incremental_orders.sql</p>
-          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`-- Create target table if it doesn't exist
+        <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-[480px] overflow-y-auto">
+          <p className="text-red-600 text-xs font-semibold mb-2">deploy_orders_microbatch.sql</p>
+          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`-- ============================================================
+-- Manual microbatch loader for fct_orders
+-- You own: schema creation, batch boundaries, late-arriving
+-- data, retries per batch, transactions, and permissions.
+-- ============================================================
+
+-- 1. Create target table if it doesn't exist
 `}<span className="text-blue-600">CREATE TABLE IF NOT EXISTS</span>{` analytics.fct_orders (
   order_id    STRING,
   customer_id STRING,
@@ -2018,7 +2024,12 @@ function DDLVisual({ showDbt }) {
   updated_at  TIMESTAMP
 );
 
--- Incremental merge
+-- 2. Figure out which day-batches to reload
+--    Reprocess last 3 days for late-arriving data
+`}<span className="text-blue-600">SET</span>{` batch_end   = CURRENT_DATE;
+`}<span className="text-blue-600">SET</span>{` batch_start = DATEADD(day, -3, CURRENT_DATE);
+
+-- 3. Day 1 batch: process a single day
 `}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
 `}<span className="text-blue-600">USING</span>{` (
   `}<span className="text-blue-600">SELECT</span>{`
@@ -2030,6 +2041,7 @@ function DDLVisual({ showDbt }) {
     CURRENT_TIMESTAMP() AS updated_at
   `}<span className="text-blue-600">FROM</span>{` raw.orders o
   `}<span className="text-blue-600">WHERE</span>{` o.order_date >= DATEADD(day, -3, CURRENT_DATE)
+    `}<span className="text-blue-600">AND</span>{` o.order_date <  DATEADD(day, -2, CURRENT_DATE)
 ) AS source
 `}<span className="text-blue-600">ON</span>{` target.order_id = source.order_id
 `}<span className="text-blue-600">WHEN MATCHED THEN UPDATE SET</span>{`
@@ -2045,7 +2057,46 @@ function DDLVisual({ showDbt }) {
   source.order_id, source.customer_id,
   source.order_date, source.amount,
   source.status, source.updated_at
-);`}</pre>
+);
+
+-- 4. Day 2 batch: repeat the entire MERGE block
+--    with shifted window boundaries
+`}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
+`}<span className="text-blue-600">USING</span>{` (
+  `}<span className="text-blue-600">SELECT</span>{`
+    o.order_id, o.customer_id, o.order_date,
+    o.amount, o.status,
+    CURRENT_TIMESTAMP() AS updated_at
+  `}<span className="text-blue-600">FROM</span>{` raw.orders o
+  `}<span className="text-blue-600">WHERE</span>{` o.order_date >= DATEADD(day, -2, CURRENT_DATE)
+    `}<span className="text-blue-600">AND</span>{` o.order_date <  DATEADD(day, -1, CURRENT_DATE)
+) AS source
+`}<span className="text-blue-600">ON</span>{` target.order_id = source.order_id
+`}<span className="text-blue-600">WHEN MATCHED THEN UPDATE SET</span>{`
+  target.customer_id = source.customer_id,
+  target.order_date  = source.order_date,
+  target.amount      = source.amount,
+  target.status      = source.status,
+  target.updated_at  = source.updated_at
+`}<span className="text-blue-600">WHEN NOT MATCHED THEN INSERT</span>{` (
+  order_id, customer_id, order_date,
+  amount, status, updated_at
+) `}<span className="text-blue-600">VALUES</span>{` (
+  source.order_id, source.customer_id,
+  source.order_date, source.amount,
+  source.status, source.updated_at
+);
+
+-- ... repeat this block for every remaining day
+-- in the batch window (Day 3, Day 4, etc.)
+
+-- You are responsible for:
+--   * Schema creation and migrations
+--   * Computing batch start/end boundaries
+--   * Late-arriving data reprocessing
+--   * Retry logic per batch on failure
+--   * Transaction management
+--   * Warehouse permissions and grants`}</pre>
         </div>
       </div>
     )
@@ -2060,7 +2111,10 @@ function DDLVisual({ showDbt }) {
             <pre className="text-amber-600 whitespace-pre-wrap">{`{{
   config(
     materialized='incremental',
-    unique_key='order_id'
+    incremental_strategy='microbatch',
+    event_time='order_date',
+    batch_size='day',
+    begin='2024-01-01',
   )
 }}`}</pre>
           </div>
@@ -2074,15 +2128,8 @@ function DDLVisual({ showDbt }) {
             <div className="ml-2">CURRENT_TIMESTAMP() <span className="text-blue-600">AS</span> updated_at</div>
             <div><span className="text-blue-600">FROM</span> <span className="text-emerald-600 font-bold">{"{{ ref('stg_orders') }}"}</span> o</div>
           </div>
-          <div className="bg-amber-50 border-l-2 border-amber-400 -ml-2 pl-2 py-1 mt-2">
-            <pre className="text-amber-600 whitespace-pre-wrap">{`{% if is_incremental() %}
-WHERE updated_at > (
-  select max(updated_at) from {{ this }}
-)
-{% endif %}`}</pre>
-          </div>
         </div>
-        <p className="text-gray-500 text-[10px] mt-3">dbt generates the full MERGE statement, handles schema changes, transactions, and permissions automatically.</p>
+        <p className="text-gray-500 text-[10px] mt-3">dbt reads event_time and automatically generates the per-batch windows, the merge, late-arriving reprocessing, retries, and permissions. No is_incremental() block, no manual date math.</p>
       </div>
     </div>
   )
