@@ -194,7 +194,14 @@ function WhatIsModelVisual({ showDbt }) {
 /*  DAG helper components                                             */
 /* ------------------------------------------------------------------ */
 
-function DagNode({ x, y, label, color = '#10b981' }) {
+function DagNode({ x, y, label, color = '#10b981', badge }) {
+  const badgeColors = {
+    fresh: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+    passed: { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+    warning: { bg: '#fef9c3', text: '#92400e', border: '#fde68a' },
+  }
+  const badgeLabels = { fresh: '\u2713 fresh', passed: '\u2713 passed', warning: '\u26A0 warning' }
+  const bc = badge ? badgeColors[badge] : null
   return (
     <g>
       <rect
@@ -219,6 +226,30 @@ function DagNode({ x, y, label, color = '#10b981' }) {
       >
         {label}
       </text>
+      {badge && bc && (
+        <g>
+          <rect
+            x={x + 120 - 46}
+            y={y - 8}
+            width={46}
+            height={16}
+            rx={8}
+            fill={bc.bg}
+            stroke={bc.border}
+            strokeWidth={0.75}
+          />
+          <text
+            x={x + 120 - 23}
+            y={y + 3}
+            textAnchor="middle"
+            fill={bc.text}
+            fontSize={7}
+            fontWeight={600}
+          >
+            {badgeLabels[badge]}
+          </text>
+        </g>
+      )}
     </g>
   )
 }
@@ -2063,76 +2094,64 @@ WHERE updated_at > (
 
 function LineageVisual({ showDbt }) {
   if (!showDbt) {
+    const tableRows = [
+      ['order_id', 'INTEGER'],
+      ['customer_id', 'INTEGER'],
+      ['order_total', 'NUMERIC(10,2)'],
+      ['status', 'INTEGER'],
+      ['created_at', 'TIMESTAMP'],
+      ['discount_cd', 'VARCHAR'],
+      ['col_7', 'VARCHAR'],
+      ['updated_at', 'TIMESTAMP'],
+      ['region_id', 'INTEGER'],
+      ['src_system', 'VARCHAR'],
+    ]
+    const callouts = [
+      { icon: '\uD83D\uDEAB', title: 'No lineage', desc: 'No way to trace where order_total originates or which models depend on it.', borderColor: 'border-l-red-400' },
+      { icon: '\u2753', title: 'Unclear definitions', desc: "The model's purpose is undocumented, and column meanings like status and col_7 are unknown.", borderColor: 'border-l-red-400' },
+      { icon: '\uD83D\uDD51', title: 'No freshness', desc: 'No indication of when this data was last loaded.', borderColor: 'border-l-amber-400' },
+      { icon: '\u26A0\uFE0F', title: 'No data quality metrics', desc: 'No checks for nulls, duplicates, or failed loads before the data reaches production.', borderColor: 'border-l-amber-400' },
+    ]
     return (
-      <div className="space-y-4">
-        <div className="bg-white border border-gray-200 border-l-4 border-l-red-300 rounded-lg p-4">
-          <p className="text-red-600 text-xs font-semibold mb-3 flex items-center gap-1.5">
-            <span className="text-base">📄</span> Where does this column come from?
-          </p>
-          <p className="text-gray-700 text-[11px] mb-2">Your documentation:</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-300 shrink-0" />
-              Confluence pages (outdated)
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-300 shrink-0" />
-              Spreadsheets (who updates these?)
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-300 shrink-0" />
-              Tribal knowledge (hope they stay)
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-300 shrink-0" />
-              Slack threads (good luck searching)
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-[55%_1fr] gap-4 items-start">
+        {/* Left column: raw warehouse table */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="font-mono text-xs font-bold text-gray-500 mb-3 tracking-wide">ORDERS_RAW</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-300">
+                  <th className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-1.5 pr-4">Column</th>
+                  <th className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider py-1.5">Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map(([col, type]) => (
+                  <tr key={col} className="border-b border-gray-100">
+                    <td className="font-mono text-[11px] text-gray-600 py-1.5 pr-4">{col}</td>
+                    <td className="font-mono text-[11px] text-gray-400 py-1.5">{type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="bg-white border border-gray-200 border-l-4 border-l-amber-300 rounded-lg p-4">
-          <p className="text-red-600 text-xs font-semibold mb-3 flex items-center gap-1.5">
-            <span className="text-base">🔍</span> Impact analysis before changes
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />
-              Manually grep through scripts
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />
-              Ask around on Slack
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />
-              "I think these 3 reports use it"
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />
-              Deploy and hope nothing breaks
-            </div>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-200 border-l-4 border-l-orange-300 rounded-lg p-4">
-          <p className="text-red-600 text-xs font-semibold mb-3 flex items-center gap-1.5">
-            <span className="text-base">👋</span> New team member onboarding
-          </p>
-          <div className="grid grid-cols-1 gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
-              "Talk to Sarah, she built that"
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
-              "Check the wiki, it might be there"
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-300 shrink-0" />
-              "Just read the 2000-line SQL file"
-            </div>
-          </div>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-700 text-[11px] font-medium text-center">Without lineage, every change is a guessing game. Documentation drifts the moment it is written.</p>
+
+        {/* Right column: warning callouts */}
+        <div className="flex flex-col gap-3 min-w-0">
+          {callouts.map((c) => (
+            <motion.div
+              key={c.title}
+              whileHover={{ y: -3 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={`bg-white border border-gray-200 border-l-4 ${c.borderColor} rounded-lg px-3 py-2.5 cursor-default hover:shadow-md hover:border-gray-300 transition-shadow`}
+            >
+              <p className="text-gray-800 text-xs font-semibold flex items-center gap-1.5">
+                <span className="text-sm">{c.icon}</span> {c.title}
+              </p>
+              <p className="text-gray-500 text-[11px] mt-0.5">{c.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
     )
@@ -2141,20 +2160,20 @@ function LineageVisual({ showDbt }) {
   return (
     <div className="space-y-4">
       {/* Model lineage DAG */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md hover:border-gray-300 transition-shadow">
         <p className="text-gray-700 text-xs font-semibold mb-2">Model Lineage (auto-generated)</p>
         <div className="flex justify-center">
-          <svg width="560" height="120" viewBox="0 0 560 120">
+          <svg width="560" height="130" viewBox="0 -10 560 130">
             {/* Sources */}
-            <DagNode x={0} y={10} label="src_orders" color="#6366f1" />
-            <DagNode x={0} y={60} label="src_customers" color="#6366f1" />
+            <DagNode x={0} y={10} label="src_orders" color="#6366f1" badge="fresh" />
+            <DagNode x={0} y={60} label="src_customers" color="#6366f1" badge="fresh" />
             {/* Staging */}
-            <DagNode x={150} y={10} label="stg_orders" color="#10b981" />
-            <DagNode x={150} y={60} label="stg_customers" color="#10b981" />
+            <DagNode x={150} y={10} label="stg_orders" color="#10b981" badge="passed" />
+            <DagNode x={150} y={60} label="stg_customers" color="#10b981" badge="warning" />
             {/* Intermediate */}
-            <DagNode x={300} y={35} label="int_order_items" color="#f59e0b" />
+            <DagNode x={300} y={35} label="int_order_items" color="#f59e0b" badge="passed" />
             {/* Mart */}
-            <DagNode x={440} y={35} label="fct_orders" color="#f97316" />
+            <DagNode x={440} y={35} label="fct_orders" color="#f97316" badge="passed" />
             {/* Edges: src to stg */}
             <DagEdge x1={120} y1={26} x2={150} y2={26} color="#6366f1" />
             <DagEdge x1={120} y1={76} x2={150} y2={76} color="#6366f1" />
@@ -2170,9 +2189,9 @@ function LineageVisual({ showDbt }) {
             <text x={500} y={105} textAnchor="middle" fontSize="8" fill="#9ca3af" fontWeight="500">Marts</text>
           </svg>
         </div>
-      </div>
+      </motion.div>
       {/* Column lineage */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md hover:border-gray-300 transition-shadow">
         <p className="text-gray-700 text-xs font-semibold mb-2">Column-level Lineage</p>
         <div className="flex items-center justify-center gap-3 text-[10px] font-mono">
           <div className="flex flex-col items-center gap-1">
@@ -2207,9 +2226,9 @@ function LineageVisual({ showDbt }) {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
       {/* YAML docs */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md hover:border-gray-300 transition-shadow">
         <p className="text-emerald-700 text-xs font-semibold mb-2">Documentation in YAML (always up to date)</p>
         <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{`models:
   - name: fct_orders
@@ -2219,7 +2238,7 @@ function LineageVisual({ showDbt }) {
         description: "Primary key from source"
       - name: revenue
         description: "Total order amount in USD"`}</pre>
-      </div>
+      </motion.div>
     </div>
   )
 }

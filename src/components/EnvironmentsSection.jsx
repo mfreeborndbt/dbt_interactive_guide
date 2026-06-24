@@ -70,7 +70,6 @@ export default function EnvironmentsSection() {
     <div className="w-full space-y-8">
       {/* Header */}
       <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Environments: Four Things They Define</h3>
         <p className="text-gray-600">
           A dbt environment is a named configuration that tells dbt <em>how</em> to connect to the data platform
           and <em>where</em> to write. Every environment specifies the same four groups of settings.
