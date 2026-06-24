@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const tabs = [
   { key: 'what', label: 'What It Is' },
-  { key: 'problem', label: 'Problem It Solves' },
+  { key: 'problem', label: 'Problems It Solves' },
   { key: 'how', label: 'How It Works' },
   { key: 'config', label: 'How It\'s Configured' },
 ]
