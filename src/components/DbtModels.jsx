@@ -1944,26 +1944,12 @@ function ReusableLogicVisual({ showDbt }) {
       <div className="space-y-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-red-600 text-xs font-semibold mb-2">stg_customers.sql</p>
-          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{`SELECT
-  id,
-  name,
-  REGEXP_REPLACE(
-    REGEXP_REPLACE(phone, '[^0-9]', ''),
-    '^1?(\\d{10})$', '(\\1) \\2-\\3'
-  ) AS phone_clean
-FROM raw.customers`}</pre>
+          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  name,\n'}<span className="bg-red-50 border-l-2 border-red-300 -ml-2 pl-2 block py-0.5">{'  REGEXP_REPLACE(\n    REGEXP_REPLACE(phone, \'[^0-9]\', \'\'),\n    \'^1?(\\d{10})$\', \'(\\1) \\2-\\3\'\n  ) AS phone_clean'}</span>{'\nFROM raw.customers'}</pre>
           <p className="text-red-600/60 text-[10px] mt-2">Phone normalization logic inline</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-red-600 text-xs font-semibold mb-2">stg_vendors.sql</p>
-          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{`SELECT
-  id,
-  company_name,
-  REGEXP_REPLACE(
-    REGEXP_REPLACE(phone, '[^0-9]', ''),
-    '^1?(\\d{10})$', '(\\1) \\2-\\3'
-  ) AS phone_clean
-FROM raw.vendors`}</pre>
+          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  company_name,\n'}<span className="bg-red-50 border-l-2 border-red-300 -ml-2 pl-2 block py-0.5">{'  REGEXP_REPLACE(\n    REGEXP_REPLACE(phone, \'[^0-9]\', \'\'),\n    \'^1?(\\d{10})$\', \'(\\1) \\2-\\3\'\n  ) AS phone_clean'}</span>{'\nFROM raw.vendors'}</pre>
           <p className="text-red-600/60 text-[10px] mt-2">Same regex copied. Update one, forget the other.</p>
         </div>
       </div>
