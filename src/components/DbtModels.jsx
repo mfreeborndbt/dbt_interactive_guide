@@ -2008,13 +2008,7 @@ function DDLVisual({ showDbt }) {
       <div className="space-y-3">
         <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-[480px] overflow-y-auto">
           <p className="text-red-600 text-xs font-semibold mb-2">deploy_orders_microbatch.sql</p>
-          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`-- ============================================================
--- Manual microbatch loader for fct_orders
--- You own: schema creation, batch boundaries, late-arriving
--- data, retries per batch, transactions, and permissions.
--- ============================================================
-
--- 1. Create target table if it doesn't exist
+          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`-- 1. Create target table if it doesn't exist
 `}<span className="text-blue-600">CREATE TABLE IF NOT EXISTS</span>{` analytics.fct_orders (
   order_id    STRING,
   customer_id STRING,
