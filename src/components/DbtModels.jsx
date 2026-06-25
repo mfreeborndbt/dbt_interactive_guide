@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import DependencyManagement from './DependencyManagement'
 
 const advantages = [
   {
@@ -14,6 +15,12 @@ const advantages = [
     title: 'Modularity',
     icon: '🧩',
     custom: 'modularity',
+  },
+  {
+    id: 'dependency_mgmt',
+    title: 'Dependency Management',
+    icon: '🔗',
+    custom: 'dependency_mgmt',
   },
   {
     id: 'reusable',
@@ -70,7 +77,7 @@ function WhatIsModelVisual({ showDbt }) {
         {!showDbt ? (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">A traditional SQL script</p>
-            <div className="bg-white border border-gray-200 rounded-lg p-5 font-mono text-[11px] leading-relaxed">
+            <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-5 font-mono text-[11px] leading-relaxed cursor-default hover:shadow-md transition-shadow">
               <div className="text-gray-400 mb-3">-- int_enriched_orders.sql</div>
               <div className="text-gray-700">
                 <div><span className="text-blue-600">CREATE OR REPLACE TABLE</span> analytics.int_enriched_orders <span className="text-blue-600">AS</span> (</div>
@@ -87,20 +94,18 @@ function WhatIsModelVisual({ showDbt }) {
                 <div className="ml-4"><span className="text-blue-600">ON</span> o.product_id = p.product_id</div>
                 <div className="mt-1">);</div>
               </div>
-            </div>
+            </motion.div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                <p className="text-xs font-semibold text-gray-700">DDL included</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">CREATE TABLE is your job</p>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                <p className="text-xs font-semibold text-gray-700">Hardcoded refs</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Table names baked in</p>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                <p className="text-xs font-semibold text-gray-700">No metadata</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Just a SQL file</p>
-              </div>
+              {[
+                { title: 'DDL included', desc: 'CREATE TABLE is your job' },
+                { title: 'Hardcoded refs', desc: 'Table names baked in' },
+                { title: 'No metadata', desc: 'Just a SQL file' },
+              ].map((item, i) => (
+                <motion.div key={i} whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 text-center cursor-default hover:shadow-md transition-shadow">
+                  <p className="text-xs font-semibold text-gray-700">{item.title}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{item.desc}</p>
+                </motion.div>
+              ))}
             </div>
           </div>
         ) : (
@@ -114,7 +119,7 @@ function WhatIsModelVisual({ showDbt }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   The model file
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-4 font-mono text-[11px] leading-relaxed">
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 font-mono text-[11px] leading-relaxed cursor-default hover:shadow-md transition-shadow">
                   <div className="text-gray-400 mb-2">models/intermediate/int_enriched_orders.sql</div>
                   <div className="text-gray-700">
                     <div className="bg-amber-50 border-l-2 border-amber-400 -ml-2 pl-2 py-0.5">
@@ -136,7 +141,7 @@ function WhatIsModelVisual({ showDbt }) {
                     </div>
                     <div className="ml-2"><span className="text-blue-600">ON</span> o.product_id = p.product_id</div>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
               {/* What makes it a model */}
@@ -145,7 +150,7 @@ function WhatIsModelVisual({ showDbt }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                   What makes it a model
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-2">
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">config</span>
                     <div>
@@ -153,8 +158,8 @@ function WhatIsModelVisual({ showDbt }) {
                       <p className="text-[11px] text-gray-500 mt-0.5">Tells dbt how to build it: <code className="bg-gray-100 px-1 rounded text-[10px]">table</code>, <code className="bg-gray-100 px-1 rounded text-[10px]">view</code>, <code className="bg-gray-100 px-1 rounded text-[10px]">incremental</code>, or <code className="bg-gray-100 px-1 rounded text-[10px]">ephemeral</code>. dbt generates the DDL for you.</p>
                     </div>
                   </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                </motion.div>
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-2">
                     <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">ref()</span>
                     <div>
@@ -162,8 +167,8 @@ function WhatIsModelVisual({ showDbt }) {
                       <p className="text-[11px] text-gray-500 mt-0.5">References other models by name. dbt resolves the schema at compile time and builds them in the right order.</p>
                     </div>
                   </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                </motion.div>
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-2">
                     <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">SELECT</span>
                     <div>
@@ -171,16 +176,7 @@ function WhatIsModelVisual({ showDbt }) {
                       <p className="text-[11px] text-gray-500 mt-0.5">No CREATE TABLE, no DDL. You write the transformation logic. dbt handles the rest.</p>
                     </div>
                   </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0">file</span>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800">One model = one file</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Each model lives in its own .sql file inside your dbt project. Testable, documented, and version controlled.</p>
-                    </div>
-                  </div>
-                </div>
+                </motion.div>
               </div>
             </div>
           </div>
@@ -1942,16 +1938,16 @@ function ReusableLogicVisual({ showDbt }) {
   if (!showDbt) {
     return (
       <div className="space-y-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md transition-shadow">
           <p className="text-red-600 text-xs font-semibold mb-2">stg_customers.sql</p>
           <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  name,\n'}<span className="bg-red-50 border-l-2 border-red-300 -ml-2 pl-2 block py-0.5">{'  REGEXP_REPLACE(\n    REGEXP_REPLACE(phone, \'[^0-9]\', \'\'),\n    \'^1?(\\d{10})$\', \'(\\1) \\2-\\3\'\n  ) AS phone_clean'}</span>{'\nFROM raw.customers'}</pre>
           <p className="text-red-600/60 text-[10px] mt-2">Phone normalization logic inline</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        </motion.div>
+        <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md transition-shadow">
           <p className="text-red-600 text-xs font-semibold mb-2">stg_vendors.sql</p>
           <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  company_name,\n'}<span className="bg-red-50 border-l-2 border-red-300 -ml-2 pl-2 block py-0.5">{'  REGEXP_REPLACE(\n    REGEXP_REPLACE(phone, \'[^0-9]\', \'\'),\n    \'^1?(\\d{10})$\', \'(\\1) \\2-\\3\'\n  ) AS phone_clean'}</span>{'\nFROM raw.vendors'}</pre>
           <p className="text-red-600/60 text-[10px] mt-2">Same regex copied. Update one, forget the other.</p>
-        </div>
+        </motion.div>
       </div>
     )
   }
@@ -1959,7 +1955,7 @@ function ReusableLogicVisual({ showDbt }) {
   return (
     <div className="space-y-4">
       {/* Macro definition */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 border-l-4 border-l-amber-300">
+      <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 border-l-4 border-l-amber-300 cursor-default hover:shadow-md transition-shadow">
         <p className="text-amber-600 text-xs font-semibold mb-2">macros/normalize_phone.sql</p>
         <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{`{% macro normalize_phone(column_name) %}
   REGEXP_REPLACE(
@@ -1968,17 +1964,17 @@ function ReusableLogicVisual({ showDbt }) {
   )
 {% endmacro %}`}</pre>
         <p className="text-amber-600/70 text-[10px] mt-2">Defined once. Tested once. Updated once.</p>
-      </div>
+      </motion.div>
       {/* Models calling the macro */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white border border-gray-200 rounded-lg p-3">
+        <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
           <p className="text-emerald-600 text-[10px] font-semibold mb-1">stg_customers.sql</p>
           <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  name,\n  '}<span className="text-amber-600 font-semibold bg-amber-100 px-0.5 rounded">{"{{ normalize_phone('phone') }}"}</span>{'\n    AS phone_clean\nFROM {{ source(\'raw\',\'customers\') }}'}</pre>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-3">
+        </motion.div>
+        <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
           <p className="text-emerald-600 text-[10px] font-semibold mb-1">stg_vendors.sql</p>
           <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">{'SELECT\n  id,\n  company_name,\n  '}<span className="text-amber-600 font-semibold bg-amber-100 px-0.5 rounded">{"{{ normalize_phone('phone') }}"}</span>{'\n    AS phone_clean\nFROM {{ source(\'raw\',\'vendors\') }}'}</pre>
-        </div>
+        </motion.div>
       </div>
     </div>
   )
@@ -1989,30 +1985,116 @@ function ReusableLogicVisual({ showDbt }) {
 /* ------------------------------------------------------------------ */
 
 function DDLVisual({ showDbt }) {
-  if (!showDbt) {
-    return (
-      <div className="space-y-3">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-[480px] overflow-y-auto">
-          <p className="text-red-600 text-xs font-semibold mb-2">fct_orders.sql</p>
-          <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`-- Incremental load with backfill support
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: Table materialization */}
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Table</p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={showDbt ? 'table-with' : 'table-without'}
+              initial={{ opacity: 0, x: showDbt ? 10 : -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: showDbt ? -10 : 10 }}
+              transition={{ duration: 0.25 }}
+            >
+              {showDbt ? (
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-[10px] font-semibold mb-2 font-mono">fct_orders.sql</p>
+                  <div className="font-mono text-[11px] leading-relaxed">
+                    <div className="bg-amber-50 border-l-2 border-amber-400 -ml-2 pl-2 py-0.5 mb-2">
+                      <span className="text-amber-600 font-bold">{"{{ config(materialized='table') }}"}</span>
+                    </div>
+                    <div className="text-gray-700">
+                      <div><span className="text-blue-600">SELECT</span></div>
+                      <div className="ml-2">o.order_id,</div>
+                      <div className="ml-2">o.customer_id,</div>
+                      <div className="ml-2">o.order_date,</div>
+                      <div className="ml-2">o.amount,</div>
+                      <div className="ml-2">o.status</div>
+                      <div><span className="text-blue-600">FROM</span> <span className="text-emerald-600 font-bold">{"{{ ref('stg_orders') }}"}</span> o</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
+                  <p className="text-red-600 text-[10px] font-semibold mb-2 font-mono">fct_orders.sql</p>
+                  <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono"><span className="text-blue-600">CREATE OR REPLACE TABLE</span>{` analytics.fct_orders (
+  order_id     STRING,
+  customer_id  STRING,
+  order_date   DATE,
+  amount       NUMERIC,
+  status       STRING,
+  updated_at   TIMESTAMP
+) `}<span className="text-blue-600">AS</span>{`
 
--- 1. Create target table if it doesn't exist
-`}<span className="text-blue-600">CREATE TABLE IF NOT EXISTS</span>{` analytics.fct_orders (
-  order_id    STRING,
-  customer_id STRING,
-  order_date  DATE,
-  amount      NUMERIC,
-  status      STRING,
-  updated_at  TIMESTAMP
+`}<span className="text-blue-600">SELECT</span>{`
+  o.order_id,
+  o.customer_id,
+  o.order_date,
+  o.amount,
+  o.status,
+  CURRENT_TIMESTAMP() AS updated_at
+`}<span className="text-blue-600">FROM</span>{` raw.orders o;`}</pre>
+                </motion.div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Right: Incremental materialization */}
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Incremental</p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={showDbt ? 'inc-with' : 'inc-without'}
+              initial={{ opacity: 0, x: showDbt ? 10 : -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: showDbt ? -10 : 10 }}
+              transition={{ duration: 0.25 }}
+            >
+              {showDbt ? (
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
+                  <p className="text-gray-500 text-[10px] font-semibold mb-2 font-mono">fct_orders.sql</p>
+                  <div className="font-mono text-[11px] leading-relaxed">
+                    <div className="bg-amber-50 border-l-2 border-amber-400 -ml-2 pl-2 py-1 mb-2">
+                      <pre className="text-amber-600 whitespace-pre-wrap font-bold">{`{{
+  config(
+    materialized='incremental',
+    incremental_strategy='microbatch',
+    event_time='order_date',
+    batch_size='day',
+  )
+}}`}</pre>
+                    </div>
+                    <div className="text-gray-700">
+                      <div><span className="text-blue-600">SELECT</span></div>
+                      <div className="ml-2">o.order_id,</div>
+                      <div className="ml-2">o.customer_id,</div>
+                      <div className="ml-2">o.order_date,</div>
+                      <div className="ml-2">o.amount,</div>
+                      <div className="ml-2">o.status</div>
+                      <div><span className="text-blue-600">FROM</span> <span className="text-emerald-600 font-bold">{"{{ ref('stg_orders') }}"}</span> o</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 max-h-[420px] overflow-y-auto cursor-default hover:shadow-md transition-shadow">
+                  <p className="text-red-600 text-[10px] font-semibold mb-2 font-mono">fct_orders.sql</p>
+                  <pre className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap font-mono"><span className="text-gray-400">-- 1. Create target table if it doesn't exist</span>{'\n'}<span className="text-blue-600">CREATE TABLE IF NOT EXISTS</span>{` analytics.fct_orders (
+  order_id     STRING,
+  customer_id  STRING,
+  order_date   DATE,
+  amount       NUMERIC,
+  status       STRING,
+  updated_at   TIMESTAMP
 );
 
--- 2. Figure out which day-batches to reload
---    Reprocess last 3 days for late-arriving data
-`}<span className="text-blue-600">SET</span>{` batch_end   = CURRENT_DATE;
+`}<span className="text-gray-400">-- 2. Figure out which day-batches to reload</span>{'\n'}<span className="text-blue-600">SET</span>{` batch_end   = CURRENT_DATE;
 `}<span className="text-blue-600">SET</span>{` batch_start = DATEADD(day, -3, CURRENT_DATE);
 
--- 3. Day 1 batch: process a single day
-`}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
+`}<span className="text-gray-400">-- 3. Day 1 batch</span>{'\n'}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
 `}<span className="text-blue-600">USING</span>{` (
   `}<span className="text-blue-600">SELECT</span>{`
     o.order_id,
@@ -2022,11 +2104,12 @@ function DDLVisual({ showDbt }) {
     o.status,
     CURRENT_TIMESTAMP() AS updated_at
   `}<span className="text-blue-600">FROM</span>{` raw.orders o
-  `}<span className="text-blue-600">WHERE</span>{` o.order_date >= DATEADD(day, -3, CURRENT_DATE)
-    `}<span className="text-blue-600">AND</span>{` o.order_date <  DATEADD(day, -2, CURRENT_DATE)
+  `}<span className="text-blue-600">WHERE</span>{` o.order_date >= $batch_start
+    `}<span className="text-blue-600">AND</span>{` o.order_date < DATEADD(day, 1, $batch_start)
 ) AS source
 `}<span className="text-blue-600">ON</span>{` target.order_id = source.order_id
 `}<span className="text-blue-600">WHEN MATCHED THEN UPDATE SET</span>{`
+  target.order_id    = source.order_id,
   target.customer_id = source.customer_id,
   target.order_date  = source.order_date,
   target.amount      = source.amount,
@@ -2036,25 +2119,31 @@ function DDLVisual({ showDbt }) {
   order_id, customer_id, order_date,
   amount, status, updated_at
 ) `}<span className="text-blue-600">VALUES</span>{` (
-  source.order_id, source.customer_id,
-  source.order_date, source.amount,
-  source.status, source.updated_at
+  source.order_id,
+  source.customer_id,
+  source.order_date,
+  source.amount,
+  source.status,
+  source.updated_at
 );
 
--- 4. Day 2 batch: repeat the entire MERGE block
---    with shifted window boundaries
-`}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
+`}<span className="text-gray-400">-- 4. Day 2 batch: repeat the entire MERGE
+--    with shifted window boundaries</span>{'\n'}<span className="text-blue-600">MERGE INTO</span>{` analytics.fct_orders AS target
 `}<span className="text-blue-600">USING</span>{` (
   `}<span className="text-blue-600">SELECT</span>{`
-    o.order_id, o.customer_id, o.order_date,
-    o.amount, o.status,
+    o.order_id,
+    o.customer_id,
+    o.order_date,
+    o.amount,
+    o.status,
     CURRENT_TIMESTAMP() AS updated_at
   `}<span className="text-blue-600">FROM</span>{` raw.orders o
-  `}<span className="text-blue-600">WHERE</span>{` o.order_date >= DATEADD(day, -2, CURRENT_DATE)
-    `}<span className="text-blue-600">AND</span>{` o.order_date <  DATEADD(day, -1, CURRENT_DATE)
+  `}<span className="text-blue-600">WHERE</span>{` o.order_date >= DATEADD(day, 1, $batch_start)
+    `}<span className="text-blue-600">AND</span>{` o.order_date < DATEADD(day, 2, $batch_start)
 ) AS source
 `}<span className="text-blue-600">ON</span>{` target.order_id = source.order_id
 `}<span className="text-blue-600">WHEN MATCHED THEN UPDATE SET</span>{`
+  target.order_id    = source.order_id,
   target.customer_id = source.customer_id,
   target.order_date  = source.order_date,
   target.amount      = source.amount,
@@ -2064,45 +2153,22 @@ function DDLVisual({ showDbt }) {
   order_id, customer_id, order_date,
   amount, status, updated_at
 ) `}<span className="text-blue-600">VALUES</span>{` (
-  source.order_id, source.customer_id,
-  source.order_date, source.amount,
-  source.status, source.updated_at
+  source.order_id,
+  source.customer_id,
+  source.order_date,
+  source.amount,
+  source.status,
+  source.updated_at
 );
 
--- ... repeat this block for every remaining day
--- in the batch window (Day 3, Day 4, etc.)`}</pre>
+`}<span className="text-gray-400">-- ... repeat for every remaining day in the batch window</span></pre>
+                </motion.div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
-    )
-  }
 
-  return (
-    <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <p className="text-gray-500 text-xs font-semibold mb-2">fct_orders.sql</p>
-        <div className="font-mono text-[11px] leading-relaxed">
-          <div className="bg-amber-50 border-l-2 border-amber-400 -ml-2 pl-2 py-1 mb-2">
-            <pre className="text-amber-600 whitespace-pre-wrap">{`{{
-  config(
-    materialized='incremental',
-    incremental_strategy='microbatch',
-    event_time='order_date',
-    batch_size='day',
-  )
-}}`}</pre>
-          </div>
-          <div className="text-gray-700">
-            <div><span className="text-blue-600">SELECT</span></div>
-            <div className="ml-2">o.order_id,</div>
-            <div className="ml-2">o.customer_id,</div>
-            <div className="ml-2">o.order_date,</div>
-            <div className="ml-2">o.amount,</div>
-            <div className="ml-2">o.status,</div>
-            <div className="ml-2">CURRENT_TIMESTAMP() <span className="text-blue-600">AS</span> updated_at</div>
-            <div><span className="text-blue-600">FROM</span> <span className="text-emerald-600 font-bold">{"{{ ref('stg_orders') }}"}</span> o</div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -2308,7 +2374,7 @@ function EnvironmentVisual({ showDbt }) {
                 { env: 'qa', schema: 'staging_db.qa_schema', color: 'amber' },
                 { env: 'prod', schema: 'prod_db.analytics', color: 'emerald' },
               ].map(({ env: e, schema, color }) => (
-                <div key={e} className="bg-white border border-gray-200 rounded-lg p-4 font-mono text-[10px] leading-relaxed overflow-hidden">
+                <motion.div key={e} whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 font-mono text-[10px] leading-relaxed overflow-hidden cursor-default hover:shadow-md transition-shadow">
                   <div className="text-gray-500 mb-2">-- {e}_int_enriched_customer.sql</div>
                   <div className="text-gray-800">
                     <div><span className="text-blue-600">CREATE TABLE</span></div>
@@ -2324,7 +2390,7 @@ function EnvironmentVisual({ showDbt }) {
                     <div><span className="text-blue-600">LEFT JOIN</span> <span className={`text-${color}-600`}>{schema}.stg_geoinfo</span> g</div>
                     <div><span className="text-blue-600">ON</span> c.geo_id = g.geo_id</div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
             <p className="text-xs text-red-600 font-medium">Three copies of the same logic. Different schemas hardcoded throughout. Change the query? Update all three files.</p>
@@ -2426,11 +2492,80 @@ function EnvironmentVisual({ showDbt }) {
 /*  Version Controlled Visual                                         */
 /* ------------------------------------------------------------------ */
 
+const vcCommits = [
+  {
+    hash: 'a3f8c2d',
+    author: 'Miles Freeborn',
+    time: '2 days ago',
+    message: 'fix: update revenue calc to exclude refunded orders',
+    file: 'models/marts/fct_revenue.sql',
+    lines: [
+      { text: '  SELECT', type: 'ctx' },
+      { text: '    customer_id,', type: 'ctx' },
+      { text: '    SUM(amount) AS total_revenue', type: 'ctx' },
+      { text: "  FROM {{ ref('stg_orders') }}", type: 'ctx' },
+      { text: "- WHERE status != 'cancelled'", type: 'del' },
+      { text: "+ WHERE status NOT IN ('cancelled', 'refunded')", type: 'add' },
+      { text: '  GROUP BY 1', type: 'ctx' },
+    ],
+  },
+  {
+    hash: 'b7e1d4a',
+    author: 'Miles Freeborn',
+    time: '5 days ago',
+    message: 'feat: add customer lifetime value to fct_revenue',
+    file: 'models/marts/fct_revenue.sql',
+    lines: [
+      { text: '  SELECT', type: 'ctx' },
+      { text: '    customer_id,', type: 'ctx' },
+      { text: '    SUM(amount) AS total_revenue,', type: 'ctx' },
+      { text: "+   COUNT(DISTINCT order_id) AS lifetime_orders,", type: 'add' },
+      { text: "+   MIN(order_date) AS first_order_date", type: 'add' },
+      { text: "  FROM {{ ref('stg_orders') }}", type: 'ctx' },
+      { text: "  WHERE status != 'cancelled'", type: 'ctx' },
+      { text: '  GROUP BY 1', type: 'ctx' },
+    ],
+  },
+  {
+    hash: 'c92f0b3',
+    author: 'Miles Freeborn',
+    time: '2 weeks ago',
+    message: 'refactor: move revenue calc from raw joins to staging refs',
+    file: 'models/marts/fct_revenue.sql',
+    lines: [
+      { text: '  SELECT', type: 'ctx' },
+      { text: '    customer_id,', type: 'ctx' },
+      { text: '    SUM(amount) AS total_revenue', type: 'ctx' },
+      { text: '- FROM raw.orders', type: 'del' },
+      { text: "+ FROM {{ ref('stg_orders') }}", type: 'add' },
+      { text: "  WHERE status != 'cancelled'", type: 'ctx' },
+      { text: '  GROUP BY 1', type: 'ctx' },
+    ],
+  },
+  {
+    hash: 'd1a6e8f',
+    author: 'Miles Freeborn',
+    time: '3 weeks ago',
+    message: 'feat: initial fct_revenue model',
+    file: 'models/marts/fct_revenue.sql',
+    lines: [
+      { text: '+ SELECT', type: 'add' },
+      { text: '+   customer_id,', type: 'add' },
+      { text: '+   SUM(amount) AS total_revenue', type: 'add' },
+      { text: '+ FROM raw.orders', type: 'add' },
+      { text: "+ WHERE status != 'cancelled'", type: 'add' },
+      { text: '+ GROUP BY 1', type: 'add' },
+    ],
+  },
+]
+
 function VersionControlVisual({ showDbt }) {
+  const [activeCommit, setActiveCommit] = useState(0)
+
   if (!showDbt) {
     return (
       <div className="space-y-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-4 cursor-default hover:shadow-md transition-shadow">
           <p className="text-red-600 text-xs font-semibold mb-2">sp_calculate_revenue (stored procedure)</p>
           <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`CREATE OR REPLACE PROCEDURE sp_calculate_revenue()
 RETURNS STRING
@@ -2448,48 +2583,52 @@ BEGIN
   RETURN 'done';
 END;
 $$;`}</pre>
-        </div>
+        </motion.div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <p className="text-red-700 text-xs font-semibold">No history</p>
-            <p className="text-red-500 text-[10px] mt-1">Who changed it? When? Why?</p>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <p className="text-red-700 text-xs font-semibold">No code review</p>
-            <p className="text-red-500 text-[10px] mt-1">Changes go straight to prod</p>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <p className="text-red-700 text-xs font-semibold">No rollback plan</p>
-            <p className="text-red-500 text-[10px] mt-1">"Does anyone have the old version?"</p>
-          </div>
+          {[
+            { title: 'No history', desc: 'Who changed it? When? Why?' },
+            { title: 'No code review', desc: 'Changes go straight to prod' },
+            { title: 'No rollback plan', desc: '"Does anyone have the old version?"' },
+          ].map((item, i) => (
+            <motion.div key={i} whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-red-50 border border-red-200 rounded-lg p-3 text-center cursor-default hover:shadow-md transition-shadow">
+              <p className="text-red-700 text-xs font-semibold">{item.title}</p>
+              <p className="text-red-500 text-[10px] mt-1">{item.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
     )
   }
 
+  const commit = vcCommits[activeCommit]
+
   return (
     <div className="space-y-4">
-      {/* Git commit header */}
+      {/* Git commit header + diff */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
           <p className="text-xs font-mono text-gray-800">
-            <span className="text-amber-600 font-semibold">a3f8c2d</span> - Miles Freeborn - 2 days ago
+            <span className="text-amber-600 font-semibold">{commit.hash}</span> - {commit.author} - {commit.time}
           </p>
-          <p className="text-xs text-gray-600 mt-0.5">fix: update revenue calc to exclude refunded orders</p>
+          <p className="text-xs text-gray-600 mt-0.5">{commit.message}</p>
         </div>
 
         {/* Diff view */}
         <div className="p-4">
-          <p className="text-[10px] font-mono text-gray-500 mb-2">models/marts/fct_revenue.sql</p>
+          <p className="text-[10px] font-mono text-gray-500 mb-2">{commit.file}</p>
           <div className="font-mono text-[11px] leading-relaxed border border-gray-200 rounded overflow-hidden">
-            <div className="bg-gray-50 px-3 py-1 text-gray-500 text-[10px] border-b border-gray-200">@@ -5,7 +5,7 @@</div>
-            <div className="px-3 py-0.5 text-gray-600">  SELECT</div>
-            <div className="px-3 py-0.5 text-gray-600">    customer_id,</div>
-            <div className="px-3 py-0.5 text-gray-600">    SUM(amount) AS total_revenue</div>
-            <div className="px-3 py-0.5 text-gray-600">  FROM {'{{ ref(\'stg_orders\') }}'}</div>
-            <div className="bg-red-50 px-3 py-0.5 text-red-700">- WHERE status != 'cancelled'</div>
-            <div className="bg-emerald-50 px-3 py-0.5 text-emerald-700">+ WHERE status NOT IN ('cancelled', 'refunded')</div>
-            <div className="px-3 py-0.5 text-gray-600">  GROUP BY 1</div>
+            {commit.lines.map((line, i) => (
+              <div
+                key={`${commit.hash}-${i}`}
+                className={`px-3 py-0.5 ${
+                  line.type === 'del' ? 'bg-red-50 text-red-700'
+                  : line.type === 'add' ? 'bg-emerald-50 text-emerald-700'
+                  : 'text-gray-600'
+                }`}
+              >
+                {line.text}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -2497,23 +2636,23 @@ $$;`}</pre>
       {/* History */}
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <p className="text-xs font-semibold text-gray-700 mb-2">History</p>
-        <div className="space-y-1.5 font-mono text-[10px]">
-          <div className="flex gap-2 text-gray-600">
-            <span className="text-amber-600 font-semibold">a3f8c2d</span>
-            <span>fix: update revenue calc to exclude refunded orders</span>
-          </div>
-          <div className="flex gap-2 text-gray-600">
-            <span className="text-amber-600 font-semibold">b7e1d4a</span>
-            <span>feat: add customer lifetime value to fct_revenue</span>
-          </div>
-          <div className="flex gap-2 text-gray-600">
-            <span className="text-amber-600 font-semibold">c92f0b3</span>
-            <span>refactor: move revenue calc from raw joins to staging refs</span>
-          </div>
-          <div className="flex gap-2 text-gray-600">
-            <span className="text-amber-600 font-semibold">d1a6e8f</span>
-            <span>feat: initial fct_revenue model</span>
-          </div>
+        <div className="space-y-1 font-mono text-[10px]">
+          {vcCommits.map((c, i) => (
+            <motion.button
+              key={c.hash}
+              onClick={() => setActiveCommit(i)}
+              whileHover={{ y: -2 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={`flex gap-2 w-full text-left px-2 py-1.5 rounded-md transition-all duration-150 cursor-pointer ${
+                activeCommit === i
+                  ? 'bg-amber-50 ring-1 ring-amber-200 text-gray-800'
+                  : 'text-gray-600 hover:bg-gray-50 hover:shadow-sm'
+              }`}
+            >
+              <span className="text-amber-600 font-semibold shrink-0">{c.hash}</span>
+              <span className="truncate">{c.message}</span>
+            </motion.button>
+          ))}
         </div>
       </div>
     </div>
@@ -2525,20 +2664,36 @@ $$;`}</pre>
 /* ------------------------------------------------------------------ */
 
 function TestingVisual({ showDbt }) {
+  // Phases per model: section highlight → test highlight → result, then next model
+  // idle → section-customers → test-customers → result-customers
+  //      → section-orders → test-orders → done
+  const [testPhase, setTestPhase] = useState('idle')
   const [nodeStates, setNodeStates] = useState({
     stg_customers: 'idle',
     stg_orders: 'idle',
     int_enriched: 'idle',
     fct_orders: 'idle',
   })
+  const [hasRun, setHasRun] = useState(false)
+  const [showFailDetail, setShowFailDetail] = useState(false)
+  const [hoveredIssue, setHoveredIssue] = useState(null) // null | 'null' | 'dup' | 'status'
   const timeoutsRef = useRef([])
 
-  const runBuild = () => {
-    // Clear any pending timeouts
+  // Whole-section highlight (soft bg, no pulse)
+  const sectionCustomers = testPhase === 'section-customers' || testPhase === 'test-customers'
+  const sectionOrders = testPhase === 'section-orders' || testPhase === 'test-orders'
+  // Narrowed test-line highlight (with pulse)
+  const testCustomers = testPhase === 'test-customers'
+  const testOrders = testPhase === 'test-orders'
+
+  const isRunning = !['idle', 'done'].includes(testPhase)
+
+  const runTest = () => {
     timeoutsRef.current.forEach(t => clearTimeout(t))
     timeoutsRef.current = []
+    setHasRun(true)
+    setShowFailDetail(false)
 
-    // Reset
     setNodeStates({
       stg_customers: 'idle',
       stg_orders: 'idle',
@@ -2546,55 +2701,110 @@ function TestingVisual({ showDbt }) {
       fct_orders: 'idle',
     })
 
-    // stg_customers: running
-    const t1 = setTimeout(() => {
-      setNodeStates(s => ({ ...s, stg_customers: 'running', stg_orders: 'running' }))
-    }, 300)
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReduced) {
+      setNodeStates({ stg_customers: 'pass', stg_orders: 'fail', int_enriched: 'skipped', fct_orders: 'skipped' })
+      setShowFailDetail(true)
+      setTestPhase('done')
+      return
+    }
 
-    // stg_customers: pass, stg_orders still running
-    const t2 = setTimeout(() => {
+    const schedule = (fn, ms) => {
+      const t = setTimeout(fn, ms)
+      timeoutsRef.current.push(t)
+    }
+
+    // stg_customers: highlight whole section
+    setTestPhase('section-customers')
+
+    // Narrow to test lines
+    schedule(() => setTestPhase('test-customers'), 1200)
+
+    // stg_customers → PASS, clear highlight
+    schedule(() => {
       setNodeStates(s => ({ ...s, stg_customers: 'pass' }))
-    }, 1000)
+      setTestPhase('result-customers')
+    }, 2800)
 
-    // stg_orders: fail
-    const t3 = setTimeout(() => {
+    // stg_orders: highlight whole section
+    schedule(() => setTestPhase('section-orders'), 3600)
+
+    // Narrow to test lines
+    schedule(() => setTestPhase('test-orders'), 4800)
+
+    // stg_orders → FAIL + downstream skipped
+    schedule(() => {
       setNodeStates(s => ({ ...s, stg_orders: 'fail', int_enriched: 'skipped', fct_orders: 'skipped' }))
-    }, 1600)
+      setTestPhase('done')
+    }, 6400)
 
-    timeoutsRef.current = [t1, t2, t3]
+    // Show fail detail callout after a beat
+    schedule(() => setShowFailDetail(true), 7100)
   }
 
   if (!showDbt) {
+    const issueHighlight = (issue) => hoveredIssue === issue ? 'outline outline-2 outline-red-400 -outline-offset-2' : ''
+
     return (
       <div className="space-y-3">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-gray-500 text-[10px] mb-2">-- Ad-hoc validation (run manually)</p>
-          <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`SELECT COUNT(*) FROM orders
-WHERE order_id IS NULL;
--- 3 rows... is that bad?`}</pre>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Left: sample data table */}
+          <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow">
+            <p className="text-xs font-semibold text-gray-700 mb-2"><code className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono">orders</code> (raw table)</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px] font-mono">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500">
+                    <th className="text-left py-1 px-1.5 font-semibold">order_id</th>
+                    <th className="text-left py-1 px-1.5 font-semibold">customer_id</th>
+                    <th className="text-left py-1 px-1.5 font-semibold">status</th>
+                    <th className="text-right py-1 px-1.5 font-semibold">amount</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-700">
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1001</td><td className="py-1 px-1.5">42</td><td className="py-1 px-1.5">placed</td><td className="py-1 px-1.5 text-right">89.00</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1002</td><td className="py-1 px-1.5">17</td><td className="py-1 px-1.5">shipped</td><td className="py-1 px-1.5 text-right">214.50</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1003</td><td className="py-1 px-1.5">61</td><td className="py-1 px-1.5">placed</td><td className="py-1 px-1.5 text-right">175.00</td></tr>
+                  <tr className="border-b border-gray-100 bg-red-50 cursor-pointer transition-all duration-200 hover:bg-red-100" onMouseEnter={() => setHoveredIssue('null')} onMouseLeave={() => setHoveredIssue(null)}><td className="py-1 px-1.5 text-red-600 font-bold">NULL</td><td className="py-1 px-1.5">83</td><td className="py-1 px-1.5">placed</td><td className="py-1 px-1.5 text-right">45.00</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1004</td><td className="py-1 px-1.5">55</td><td className="py-1 px-1.5">returned</td><td className="py-1 px-1.5 text-right">132.00</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1005</td><td className="py-1 px-1.5">29</td><td className="py-1 px-1.5">shipped</td><td className="py-1 px-1.5 text-right">67.25</td></tr>
+                  <tr className="border-b border-gray-100 bg-red-50 cursor-pointer transition-all duration-200 hover:bg-red-100" onMouseEnter={() => setHoveredIssue('dup')} onMouseLeave={() => setHoveredIssue(null)}><td className="py-1 px-1.5 text-red-600 font-bold">1002</td><td className="py-1 px-1.5">17</td><td className="py-1 px-1.5">shipped</td><td className="py-1 px-1.5 text-right">214.50</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1007</td><td className="py-1 px-1.5">14</td><td className="py-1 px-1.5">placed</td><td className="py-1 px-1.5 text-right">310.00</td></tr>
+                  <tr className="border-b border-gray-100"><td className="py-1 px-1.5">1008</td><td className="py-1 px-1.5">72</td><td className="py-1 px-1.5">shipped</td><td className="py-1 px-1.5 text-right">58.90</td></tr>
+                  <tr className="border-b border-gray-100 bg-red-50 cursor-pointer transition-all duration-200 hover:bg-red-100" onMouseEnter={() => setHoveredIssue('status')} onMouseLeave={() => setHoveredIssue(null)}><td className="py-1 px-1.5">1009</td><td className="py-1 px-1.5">38</td><td className="py-1 px-1.5 text-red-600 font-bold">pending</td><td className="py-1 px-1.5 text-right">99.00</td></tr>
+                  <tr><td className="py-1 px-1.5">1010</td><td className="py-1 px-1.5">46</td><td className="py-1 px-1.5">returned</td><td className="py-1 px-1.5 text-right">185.75</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[9px] text-gray-400 mt-1.5 italic">Hover a red row to see which test catches it.</p>
+          </motion.div>
+
+          {/* Right: manual test SQL blocks */}
+          <div className="space-y-3">
+            <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className={`bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-all duration-200 ${issueHighlight('null')}`}>
+              <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono"><span className="text-gray-400">-- Check for null order_id</span>{'\n'}SELECT COUNT(*) <span className="bg-amber-100 text-amber-800 rounded px-0.5">FROM orders</span>{'\n'}WHERE order_id IS NULL;</pre>
+            </motion.div>
+            <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className={`bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-all duration-200 ${issueHighlight('dup')}`}>
+              <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono"><span className="text-gray-400">-- Check for duplicate order_id</span>{'\n'}SELECT order_id, COUNT(*){'\n'}<span className="bg-amber-100 text-amber-800 rounded px-0.5">FROM orders</span> GROUP BY 1{'\n'}HAVING COUNT(*) &gt; 1;</pre>
+            </motion.div>
+            <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className={`bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-all duration-200 ${issueHighlight('status')}`}>
+              <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono"><span className="text-gray-400">-- Check for unexpected status values</span>{'\n'}SELECT COUNT(*) <span className="bg-amber-100 text-amber-800 rounded px-0.5">FROM orders</span>{'\n'}WHERE status NOT IN ({'\n'}  'placed','shipped','returned'{'\n'});</pre>
+            </motion.div>
+            <p className="text-[10px] text-gray-500 italic">Every check hardcodes the table name. No shared reference — change the table and you fix each query by hand.</p>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`SELECT order_id, COUNT(*)
-FROM orders GROUP BY 1
-HAVING COUNT(*) > 1;
--- Duplicates found. Who gets paged?`}</pre>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <pre className="text-gray-800 text-[11px] leading-relaxed whitespace-pre-wrap font-mono">{`SELECT COUNT(*) FROM orders
-WHERE status NOT IN (
-  'placed','shipped','returned'
-);
--- Unknown statuses. Since when?`}</pre>
-        </div>
+
+        {/* Callout cards */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-            <p className="text-red-700 text-[10px] font-semibold">No framework</p>
-            <p className="text-red-500 text-[9px]">Every check is hand-written</p>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-            <p className="text-red-700 text-[10px] font-semibold">No automation</p>
-            <p className="text-red-500 text-[9px]">Someone has to remember to run these</p>
-          </div>
+          {[
+            { title: 'No framework', desc: 'Every check is hand-written' },
+            { title: 'No automation', desc: 'Someone has to remember to run these' },
+          ].map((item, i) => (
+            <motion.div key={i} whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }} className="bg-red-50 border border-red-200 rounded-lg p-2 text-center cursor-default hover:shadow-md transition-shadow">
+              <p className="text-red-700 text-[10px] font-semibold">{item.title}</p>
+              <p className="text-red-500 text-[9px]">{item.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </div>
     )
@@ -2602,48 +2812,67 @@ WHERE status NOT IN (
 
   const nodeColorMap = {
     idle: 'bg-gray-100 border-gray-300 text-gray-500',
-    running: 'bg-blue-100 border-blue-400 text-blue-700',
     pass: 'bg-emerald-100 border-emerald-400 text-emerald-700',
     fail: 'bg-red-100 border-red-400 text-red-700',
     skipped: 'bg-gray-100 border-gray-300 text-gray-400',
   }
 
+  // Inline CSS for pulse (reuse same keyframe as dependency management)
+  const pulseStyle = `
+    @keyframes test-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .test-pulse { animation: test-pulse 0.8s ease-in-out infinite; }
+  `
+
   return (
     <div className="flex gap-4">
+      <style>{pulseStyle}</style>
+
       {/* Left: YAML test definitions */}
       <div className="flex-1 bg-white border border-gray-200 rounded-lg p-4">
         <p className="text-xs font-semibold text-gray-700 mb-2">_stg_models.yml</p>
         <div className="font-mono text-[11px] leading-relaxed">
           <div><span className="text-purple-600">models</span><span className="text-gray-800">:</span></div>
-          <div>  - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">stg_orders</span></div>
-          <div>    <span className="text-purple-600">columns</span><span className="text-gray-800">:</span></div>
-          <div>      - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">order_id</span></div>
-          <div>        <span className="text-purple-600">data_tests</span><span className="text-gray-800">:</span></div>
-          <div>          - <span className="text-blue-600">unique</span></div>
-          <div>          - <span className="text-blue-600">not_null</span></div>
-          <div className="mt-1">      - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">status</span></div>
-          <div>        <span className="text-purple-600">data_tests</span><span className="text-gray-800">:</span></div>
-          <div>          - <span className="text-blue-600">accepted_values</span><span className="text-gray-800">:</span></div>
-          <div>              <span className="text-purple-600">values</span><span className="text-gray-800">:</span></div>
-          <div>                - <span className="text-emerald-600">'placed'</span></div>
-          <div>                - <span className="text-emerald-600">'shipped'</span></div>
-          <div>                - <span className="text-emerald-600">'returned'</span></div>
-          <div className="mt-1">      - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">customer_id</span></div>
-          <div>        <span className="text-purple-600">data_tests</span><span className="text-gray-800">:</span></div>
-          <div>          - <span className="text-blue-600">not_null</span></div>
-          <div>          - <span className="text-blue-600">relationships</span><span className="text-gray-800">:</span></div>
-          <div>              <span className="text-purple-600">to</span><span className="text-gray-800">:</span> <span className="text-emerald-600">ref('stg_customers')</span></div>
-          <div>              <span className="text-purple-600">field</span><span className="text-gray-800">:</span> <span className="text-emerald-600">customer_id</span></div>
+
+          {/* stg_customers block */}
+          <div className={`rounded -mx-2 px-2 py-0.5 transition-all duration-300 ${sectionCustomers ? 'bg-emerald-50/60' : ''}`}>
+            <div>  - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">stg_customers</span></div>
+            <div>    <span className="text-purple-600">columns</span><span className="text-gray-800">:</span></div>
+            <div>      - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">customer_id</span></div>
+            <div className={`rounded -mx-1 px-1 transition-all duration-300 ${testCustomers ? 'bg-emerald-100 border-l-2 border-emerald-400 test-pulse' : 'border-l-2 border-transparent'}`}>
+              <div>        <span className="text-purple-600">data_tests</span><span className="text-gray-800">:</span></div>
+              <div>          - <span className="text-blue-600">unique</span></div>
+              <div>          - <span className="text-blue-600">not_null</span></div>
+            </div>
+          </div>
+
+          {/* stg_orders block */}
+          <div className={`rounded -mx-2 px-2 py-0.5 mt-1 transition-all duration-300 ${sectionOrders ? 'bg-emerald-50/60' : ''}`}>
+            <div>  - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">stg_orders</span></div>
+            <div>    <span className="text-purple-600">columns</span><span className="text-gray-800">:</span></div>
+            <div>      - <span className="text-purple-600">name</span><span className="text-gray-800">:</span> <span className="text-emerald-600">order_id</span></div>
+            <div className={`rounded -mx-1 px-1 transition-all duration-300 ${testOrders ? 'bg-emerald-100 border-l-2 border-emerald-400 test-pulse' : 'border-l-2 border-transparent'}`}>
+              <div>        <span className="text-purple-600">data_tests</span><span className="text-gray-800">:</span></div>
+              <div>          - <span className="text-blue-600">unique</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Right: Mini DAG with build button */}
+      {/* Right: results + button */}
       <div className="flex-1 flex flex-col gap-3">
         <button
-          onClick={runBuild}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+          onClick={runTest}
+          disabled={isRunning}
+          className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all duration-150 ${
+            isRunning
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-950'
+          }`}
         >
-          Run dbt build
+          {isRunning ? 'Running...' : hasRun ? 'Replay' : 'Run dbt test'}
         </button>
         <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">
           {[
@@ -2657,18 +2886,24 @@ WHERE status NOT IN (
               className={`border rounded px-3 py-2 text-xs font-mono font-semibold text-center transition-all duration-300 ${nodeColorMap[nodeStates[node.key]]}`}
             >
               {node.label}
-              {nodeStates[node.key] === 'pass' && ' - PASS'}
-              {nodeStates[node.key] === 'fail' && ' - FAIL'}
-              {nodeStates[node.key] === 'skipped' && ' - SKIPPED'}
-              {nodeStates[node.key] === 'running' && ' ...'}
+              {nodeStates[node.key] === 'pass' && ' — PASS'}
+              {nodeStates[node.key] === 'fail' && ' — FAIL'}
+              {nodeStates[node.key] === 'skipped' && ' — SKIPPED'}
             </div>
           ))}
-          {nodeStates.stg_orders === 'fail' && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-2 mt-2">
-              <p className="text-red-700 text-xs font-semibold">FAIL: unique test on stg_orders.order_id</p>
-              <p className="text-red-700 text-xs mt-0.5">Found 8 duplicate records. Downstream models skipped.</p>
-            </div>
-          )}
+          <AnimatePresence>
+            {showFailDetail && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-red-50 border border-red-200 rounded-lg p-2 mt-2"
+              >
+                <p className="text-red-700 text-xs font-semibold">FAIL: unique test on stg_orders.order_id</p>
+                <p className="text-red-700 text-xs mt-0.5">Found 8 duplicate records. Downstream models skipped.</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
@@ -2689,6 +2924,8 @@ export default function DbtModels() {
         return <WhatIsModelVisual showDbt={showDbt} />
       case 'modularity':
         return <ModularityVisual showDbt={showDbt} />
+      case 'dependency_mgmt':
+        return <DependencyManagement showDbt={showDbt} />
       case 'reusable':
         return <ReusableLogicVisual showDbt={showDbt} />
       case 'ddl':
@@ -2769,7 +3006,6 @@ export default function DbtModels() {
                   {active.title}
                 </h3>
               </div>
-              {/* Toggle */}
               <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
                 <button
                   onClick={() => setShowDbt(false)}
