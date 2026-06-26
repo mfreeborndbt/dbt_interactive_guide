@@ -502,7 +502,7 @@ function MartsTopic() {
           <motion.div key="without" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
             <div className="text-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">Many versions of the truth</h3>
-              <p className="text-sm text-gray-500 mt-1">Every team builds its own customer, order, or supplier. None of them agree.</p>
+              <p className="text-sm text-gray-500 mt-1">Every team builds its own customer and order tables. None of them agree.</p>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -512,6 +512,11 @@ function MartsTopic() {
                   { name: 'customer_final', team: 'marketing', color: '#0891b2' },
                   { name: 'mkt_customers', team: 'growth', color: '#dc2626' },
                   { name: 'cust_master', team: 'ops', color: '#7c3aed' },
+                  { name: 'finance_orders', team: 'finance', color: '#d97706' },
+                  { name: 'marketing_orders', team: 'marketing', color: '#0891b2' },
+                  { name: 'orders_per_day', team: 'analytics', color: '#6366f1' },
+                  { name: 'cust_orders_v2', team: 'growth', color: '#dc2626' },
+                  { name: 'customer_revenue', team: 'ops', color: '#7c3aed' },
                 ].map((t) => (
                   <HoverBox key={t.name} className="bg-white border border-gray-200 rounded-lg p-3 text-center hover:shadow-md hover:border-gray-300 transition-shadow">
                     <div className="font-mono text-[10px] font-semibold text-gray-700">{t.name}</div>
@@ -519,7 +524,6 @@ function MartsTopic() {
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
                       <span className="text-[9px] font-medium" style={{ color: t.color }}>{t.team}</span>
                     </div>
-                    <div className="text-[8px] text-gray-400 mt-1">No lineage</div>
                   </HoverBox>
                 ))}
               </div>
@@ -534,19 +538,23 @@ function MartsTopic() {
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
               <div className="overflow-x-auto">
                 <MiniDAG
-                  width={750} height={160}
+                  width={750} height={190}
                   nodes={[
-                    { id: 'src', label: 'raw_customers', x: 16, y: 66, color: LC.source.fill, w: 110, h: NH },
-                    { id: 'stg', label: 'stg_customers', x: 158, y: 66, color: LC.staging.fill, w: 110, h: NH },
-                    { id: 'int', label: 'int_customer_orders', x: 300, y: 66, color: LC.intermediate.fill, w: 130, h: NH },
-                    { id: 'dim', label: 'dim_customers', x: 462, y: 66, color: LC.mart.fill, highlight: true, w: 120, h: NH },
-                    { id: 'c1', label: 'analytics_dash', x: 620, y: 16, color: '#6b7280', w: 105, h: NH },
-                    { id: 'c2', label: 'finance_report', x: 620, y: 52, color: '#6b7280', w: 105, h: NH },
-                    { id: 'c3', label: 'marketing_kpis', x: 620, y: 88, color: '#6b7280', w: 105, h: NH },
-                    { id: 'c4', label: 'exec_summary', x: 620, y: 124, color: '#6b7280', w: 105, h: NH },
+                    { id: 'src_cust', label: 'raw_customers', x: 16, y: 30, color: LC.source.fill, w: 110, h: NH },
+                    { id: 'src_ord', label: 'raw_orders', x: 16, y: 120, color: LC.source.fill, w: 110, h: NH },
+                    { id: 'stg_cust', label: 'stg_customers', x: 168, y: 30, color: LC.staging.fill, w: 110, h: NH },
+                    { id: 'stg_ord', label: 'stg_orders', x: 168, y: 120, color: LC.staging.fill, w: 110, h: NH },
+                    { id: 'int', label: 'int_customer_orders', x: 318, y: 120, color: LC.intermediate.fill, w: 130, h: NH },
+                    { id: 'dim', label: 'dim_customers', x: 478, y: 75, color: LC.mart.fill, highlight: true, w: 120, h: NH },
+                    { id: 'c1', label: 'analytics_dash', x: 630, y: 16, color: '#6b7280', w: 105, h: NH },
+                    { id: 'c2', label: 'finance_report', x: 630, y: 56, color: '#6b7280', w: 105, h: NH },
+                    { id: 'c3', label: 'marketing_kpis', x: 630, y: 96, color: '#6b7280', w: 105, h: NH },
+                    { id: 'c4', label: 'exec_summary', x: 630, y: 136, color: '#6b7280', w: 105, h: NH },
                   ]}
                   edges={[
-                    ['src', 'stg'], ['stg', 'int'], ['int', 'dim'],
+                    ['src_cust', 'stg_cust'], ['src_ord', 'stg_ord'],
+                    ['stg_ord', 'int'],
+                    ['stg_cust', 'dim'], ['int', 'dim'],
                     ['dim', 'c1'], ['dim', 'c2'], ['dim', 'c3'], ['dim', 'c4'],
                   ]}
                 />
@@ -556,6 +564,33 @@ function MartsTopic() {
                 <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${LC.staging.dot}`} /> staging</div>
                 <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${LC.intermediate.dot}`} /> intermediate</div>
                 <div className="flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${LC.mart.dot}`} /> mart</div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+                {[
+                  {
+                    title: 'Specific entity',
+                    text: <>Each mart represents one concept at its grain, like <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">orders</code> or <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">customers</code>. Every row is a single instance of that entity.</>,
+                  },
+                  {
+                    title: 'Wide and denormalized',
+                    text: <>Pull in all the related data someone needs to answer questions about that entity, even if it means repeating data across marts.</>,
+                  },
+                  {
+                    title: 'One concept, one model',
+                    text: <>Don{"'"}t rebuild the same concept per team. <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">finance_orders</code> and <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">marketing_orders</code> is an anti-pattern. If finance truly needs different logic, name it as a separate concept: <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">tax_revenue</code> vs <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">revenue</code>, not <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">finance_revenue</code> vs <code className="font-mono text-[10px] bg-gray-100 px-1 rounded">marketing_revenue</code>.</>,
+                  },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -3 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-default hover:shadow-md transition-shadow"
+                  >
+                    <p className="text-xs font-semibold mb-1 text-center" style={{ color: LC.mart.fill }}>{item.title}</p>
+                    <p className="text-[11px] text-gray-600 leading-relaxed">{item.text}</p>
+                  </motion.div>
+                ))}
               </div>
             </div>
           </motion.div>

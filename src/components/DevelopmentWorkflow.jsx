@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 /* ─── Step content components ─────────────────────────────── */
 
@@ -996,76 +996,471 @@ function DeferralDiagram() {
   )
 }
 
-function QAStep2() {
-  const ALL  = [0,1,2,3,4,5,6]
-  const SLIM = [5,6]
+/* ── Compact animated DAG for QA Step 2 simulators ─── */
+const simNodes = [
+  { id: 0, label: 'stg_customers',   x: 5,   y: 8,   w: 88, h: 28 },
+  { id: 1, label: 'stg_geoinfo',     x: 5,   y: 44,  w: 88, h: 28 },
+  { id: 2, label: 'stg_orders',      x: 5,   y: 86,  w: 88, h: 28 },
+  { id: 3, label: 'stg_product',     x: 5,   y: 122, w: 88, h: 28 },
+  { id: 4, label: 'int_enriched_customer', x: 130, y: 20, w: 108, h: 28 },
+  { id: 5, label: 'int_enriched_orders',   x: 130, y: 92, w: 108, h: 28 },
+  { id: 6, label: 'fct_orders_w_cust',     x: 274, y: 56, w: 108, h: 28 },
+]
+const simEdges = [[0,4],[1,4],[2,5],[3,5],[4,6],[5,6]]
+
+const simStateColors = {
+  building: { bg: '#93c5fd', border: '#3b82f6', text: '#1e3a5f' },
+  testing:  { bg: '#c4b5fd', border: '#7c3aed', text: '#4c1d95' },
+  complete: { bg: '#86efac', border: '#22c55e', text: '#166534' },
+  skipped:  { bg: '#e5e7eb', border: '#9ca3af', text: '#6b7280' },
+  idle:     { bg: '#f3f4f6', border: '#d1d5db', text: '#9ca3af' },
+}
+
+function SimDAG({ nodeStates, changedId, deferredIds, uid = 's' }) {
+  return (
+    <svg viewBox="0 0 390 158" className="w-full h-auto">
+      <defs>
+        <marker id={`sa-${uid}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+          <path d="M0,0 L0,5 L5,2.5 z" fill="#22c55e" />
+        </marker>
+        <marker id={`sg-${uid}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+          <path d="M0,0 L0,5 L5,2.5 z" fill="#d1d5db" />
+        </marker>
+      </defs>
+
+      {simEdges.map(([s, d]) => {
+        const src = simNodes[s], dst = simNodes[d]
+        const x1 = src.x + src.w, y1 = src.y + src.h / 2
+        const x2 = dst.x - 4, y2 = dst.y + dst.h / 2
+        const mx = (x1 + x2) / 2
+        const sState = nodeStates[s], dState = nodeStates[d]
+        const live = sState === 'complete' && (dState === 'complete' || dState === 'building' || dState === 'testing')
+        return (
+          <motion.path key={`${s}-${d}`}
+            d={`M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`}
+            fill="none" strokeWidth={1.5}
+            animate={{ stroke: live ? '#22c55e' : '#d1d5db' }}
+            markerEnd={live ? `url(#sa-${uid})` : `url(#sg-${uid})`}
+            transition={{ duration: 0.3 }}
+          />
+        )
+      })}
+
+      {/* Deferred annotation */}
+      {deferredIds && deferredIds.length > 0 && (() => {
+        const defNodes = deferredIds.map(id => simNodes[id])
+        const minY = Math.min(...defNodes.map(n => n.y)) - 4
+        const maxY = Math.max(...defNodes.map(n => n.y + n.h)) + 4
+        return (
+          <g>
+            <rect x={1} y={minY} width={96} height={maxY - minY} rx={6}
+              fill="rgba(219,234,254,0.35)" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" />
+            <text x={49} y={maxY + 11} fontSize="7" fill="#3b82f6" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">inputs read from PROD</text>
+          </g>
+        )
+      })()}
+
+      {simNodes.map((n) => {
+        const state = nodeStates[n.id] || 'idle'
+        const c = simStateColors[state] || simStateColors.idle
+        const isModified = n.id === changedId
+        return (
+          <motion.g key={n.id}>
+            <motion.rect x={n.x} y={n.y} width={n.w} height={n.h} rx={6}
+              animate={{ fill: c.bg, stroke: c.border }}
+              strokeWidth={isModified && state !== 'idle' ? 2 : 1.2}
+              strokeDasharray={isModified && state !== 'idle' ? '5 3' : undefined}
+              transition={{ duration: 0.3 }}
+            />
+            {state === 'building' && (
+              <motion.rect x={n.x} y={n.y} width={n.w} height={n.h} rx={6}
+                fill="none" stroke={c.border} strokeWidth={1}
+                animate={{ opacity: [0.6, 0, 0.6] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              />
+            )}
+            {state === 'testing' && (
+              <motion.rect x={n.x} y={n.y} width={n.w} height={n.h} rx={6}
+                fill="none" stroke={c.border} strokeWidth={1}
+                animate={{ opacity: [0.8, 0.2, 0.8] }}
+                transition={{ duration: 0.8, repeat: Infinity }}
+              />
+            )}
+            {state === 'complete' && (
+              <>
+                <motion.circle cx={n.x + n.w - 9} cy={n.y + 9} r={5} fill="#22c55e"
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                />
+                <motion.path
+                  d={`M ${n.x + n.w - 12} ${n.y + 9} l 2.5 2.5 l 4 -4`}
+                  stroke="white" strokeWidth={1.2} fill="none" strokeLinecap="round" strokeLinejoin="round"
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.1, duration: 0.25 }}
+                />
+              </>
+            )}
+            {state === 'skipped' && (
+              <>
+                <motion.circle cx={n.x + n.w - 9} cy={n.y + 9} r={5} fill="#9ca3af"
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                />
+                <motion.path
+                  d={`M ${n.x + n.w - 12} ${n.y + 9} l 5 0`}
+                  stroke="white" strokeWidth={1.5} fill="none" strokeLinecap="round"
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.1, duration: 0.2 }}
+                />
+              </>
+            )}
+            <text x={n.x + n.w / 2} y={n.y + n.h / 2 + 3.5} textAnchor="middle" fontSize="7.5"
+              fontFamily="monospace" fontWeight="600" fill={c.text}
+            >{n.label}</text>
+          </motion.g>
+        )
+      })}
+    </svg>
+  )
+}
+
+const simLegend = [
+  { color: 'bg-blue-200 border-blue-400', label: 'Building' },
+  { color: 'bg-violet-200 border-violet-400', label: 'Testing' },
+  { color: 'bg-emerald-200 border-emerald-400', label: 'Complete' },
+  { color: 'bg-gray-200 border-gray-400', label: 'Skipped (deferred)' },
+]
+const modifiedLegend = { border: 'border-amber-500 border-dashed', label: 'Modified' }
+
+function useSimRunner() {
+  const [nodeStates, setNodeStates] = useState({})
+  const [running, setRunning] = useState(false)
+  const [hasRun, setHasRun] = useState(false)
+  const [summary, setSummary] = useState('')
+  const timers = useRef([])
+
+  const reset = useCallback(() => {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    setNodeStates({})
+    setRunning(false)
+    setHasRun(false)
+    setSummary('')
+  }, [])
+
+  const run = useCallback((steps, summaryText) => {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    setNodeStates({})
+    setSummary('')
+    setRunning(true)
+    setHasRun(true)
+
+    let delay = 300
+    steps.forEach(({ ids, state, wait }) => {
+      const t = setTimeout(() => {
+        setNodeStates(prev => {
+          const next = { ...prev }
+          ids.forEach(id => { next[id] = state })
+          return next
+        })
+      }, delay)
+      timers.current.push(t)
+      delay += wait || 600
+    })
+
+    const t = setTimeout(() => {
+      setRunning(false)
+      setSummary(summaryText)
+    }, delay)
+    timers.current.push(t)
+  }, [])
+
+  return { nodeStates, running, hasRun, summary, run, reset }
+}
+
+/* ── Deferral simulator ─── */
+function DeferralSim() {
+  const [view, setView] = useState('without')
+  const sim = useSimRunner()
+
+  const stepsWithout = [
+    { ids: [0,1,2,3], state: 'building', wait: 700 },
+    { ids: [0,1,2,3], state: 'testing', wait: 500 },
+    { ids: [0,1,2,3], state: 'complete', wait: 600 },
+    { ids: [4,5], state: 'building', wait: 700 },
+    { ids: [4,5], state: 'testing', wait: 500 },
+    { ids: [4,5], state: 'complete', wait: 600 },
+    { ids: [6], state: 'building', wait: 700 },
+    { ids: [6], state: 'testing', wait: 500 },
+    { ids: [6], state: 'complete', wait: 0 },
+  ]
+  const stepsWith = [
+    { ids: [0,1,2,3], state: 'skipped', wait: 500 },
+    { ids: [4], state: 'skipped', wait: 500 },
+    { ids: [5], state: 'building', wait: 700 },
+    { ids: [5], state: 'testing', wait: 500 },
+    { ids: [5], state: 'complete', wait: 600 },
+    { ids: [6], state: 'building', wait: 700 },
+    { ids: [6], state: 'testing', wait: 500 },
+    { ids: [6], state: 'complete', wait: 0 },
+  ]
+
+  const runSim = useCallback(() => {
+    sim.run(
+      view === 'without' ? stepsWithout : stepsWith,
+      view === 'without'
+        ? 'Built 7 models in QA. All upstream rebuilt from scratch.'
+        : 'Built 2 models. 5 deferred to PROD — no rebuild needed.'
+    )
+  }, [sim, view])
+
+  const switchView = useCallback((v) => {
+    setView(v)
+    sim.reset()
+  }, [sim])
+
+  const isWithout = view === 'without'
 
   return (
-    <div className="w-full space-y-6">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">How ref() resolves with and without deferral</p>
+        <button
+          onClick={runSim}
+          disabled={sim.running}
+          className={`px-4 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 shrink-0 ${
+            sim.running
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-950'
+          }`}
+        >
+          {sim.running ? 'Running...' : sim.hasRun ? 'Run again' : 'Run simulation'}
+        </button>
+      </div>
+
+      {/* Without / With toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-gray-100 rounded-lg p-0.5 text-xs">
+          {[{ key: 'without', label: 'Without Deferral' }, { key: 'with', label: 'With Deferral' }].map(t => (
+            <button key={t.key} onClick={() => switchView(t.key)}
+              className={`px-3.5 py-1 rounded-md font-medium transition-all ${
+                view === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div key={view} initial={{ opacity: 0, x: isWithout ? -12 : 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: isWithout ? 12 : -12 }} transition={{ duration: 0.2 }}>
+          <div className="space-y-2">
+            <div className={`border rounded-lg p-2 ${isWithout ? 'border-red-200 bg-red-50/50' : 'border-green-200 bg-green-50/50'}`}>
+              <SimDAG
+                nodeStates={sim.nodeStates}
+                changedId={5}
+                deferredIds={isWithout ? undefined : [0,1,2,3]}
+                uid={isWithout ? 'def-wo' : 'def-w'}
+              />
+            </div>
+            <div className={`border rounded-lg p-2.5 text-[11px] font-mono text-gray-700 leading-relaxed overflow-x-auto ${
+              isWithout ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'
+            }`}>
+              <div className="text-gray-400 text-[10px] mb-1">{isWithout ? 'compiled (no deferral)' : 'compiled (deferred)'}</div>
+              <div><span className="text-blue-600">with</span> orders <span className="text-blue-600">as</span> {'('}</div>
+              <div className="pl-3"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {isWithout
+                ? <span className="text-red-600">QA.analytics.stg_orders</span>
+                : <span className="text-green-700 font-bold">PROD.analytics.stg_orders</span>
+              }</div>
+              <div>{'),'}</div>
+              <div>products <span className="text-blue-600">as</span> {'('}</div>
+              <div className="pl-3"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {isWithout
+                ? <span className="text-red-600">QA.analytics.stg_product</span>
+                : <span className="text-green-700 font-bold">PROD.analytics.stg_product</span>
+              }</div>
+              <div>{')'}</div>
+              <div className="text-gray-400 text-[10px] mt-1.5 font-sans">{isWithout ? '↳ writes to QA, reads from QA' : '↳ writes to QA, reads from PROD'}</div>
+            </div>
+            {sim.summary && <p className={`text-[10px] font-medium ${isWithout ? 'text-red-600' : 'text-green-600'}`}>{sim.summary}</p>}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-gray-500">
+        {simLegend.map(l => (
+          <div key={l.label} className="flex items-center gap-1">
+            <span className={`w-2.5 h-2.5 rounded border ${l.color}`} />
+            {l.label}
+          </div>
+        ))}
+        <div className="flex items-center gap-1">
+          <span className={`w-2.5 h-2.5 rounded ${modifiedLegend.border} border-2 bg-white`} />
+          {modifiedLegend.label}
+        </div>
+      </div>
+
+      {!sim.hasRun && (
+        <p className="text-[10px] text-gray-400 text-center">Click &quot;Run simulation&quot; to see how deferral changes what gets built</p>
+      )}
+    </div>
+  )
+}
+
+/* ── Slim CI simulator ─── */
+function SlimCISim() {
+  const [view, setView] = useState('without')
+  const sim = useSimRunner()
+
+  const stepsWithout = [
+    { ids: [0,1,2,3], state: 'building', wait: 700 },
+    { ids: [0,1,2,3], state: 'testing', wait: 500 },
+    { ids: [0,1,2,3], state: 'complete', wait: 600 },
+    { ids: [4,5], state: 'building', wait: 700 },
+    { ids: [4,5], state: 'testing', wait: 500 },
+    { ids: [4,5], state: 'complete', wait: 600 },
+    { ids: [6], state: 'building', wait: 700 },
+    { ids: [6], state: 'testing', wait: 500 },
+    { ids: [6], state: 'complete', wait: 0 },
+  ]
+  const stepsWith = [
+    { ids: [0,1,2,3], state: 'skipped', wait: 500 },
+    { ids: [4], state: 'skipped', wait: 500 },
+    { ids: [5], state: 'building', wait: 700 },
+    { ids: [5], state: 'testing', wait: 500 },
+    { ids: [5], state: 'complete', wait: 600 },
+    { ids: [6], state: 'building', wait: 700 },
+    { ids: [6], state: 'testing', wait: 500 },
+    { ids: [6], state: 'complete', wait: 0 },
+  ]
+
+  const runSim = useCallback(() => {
+    sim.run(
+      view === 'without' ? stepsWithout : stepsWith,
+      view === 'without'
+        ? 'Rebuilt all 7 models. Wasted compute on 5 unchanged models.'
+        : 'Built 2 models. 5 skipped — only changed + downstream ran.'
+    )
+  }, [sim, view])
+
+  const switchView = useCallback((v) => {
+    setView(v)
+    sim.reset()
+  }, [sim])
+
+  const isWithout = view === 'without'
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Build only the changed model + its children</p>
+        <button
+          onClick={runSim}
+          disabled={sim.running}
+          className={`px-4 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 shrink-0 ${
+            sim.running
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-950'
+          }`}
+        >
+          {sim.running ? 'Running...' : sim.hasRun ? 'Run again' : 'Run simulation'}
+        </button>
+      </div>
+
+      {/* Without / With toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-gray-100 rounded-lg p-0.5 text-xs">
+          {[{ key: 'without', label: 'Without Slim CI' }, { key: 'with', label: 'With Slim CI' }].map(t => (
+            <button key={t.key} onClick={() => switchView(t.key)}
+              className={`px-3.5 py-1 rounded-md font-medium transition-all ${
+                view === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div key={view} initial={{ opacity: 0, x: isWithout ? -12 : 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: isWithout ? 12 : -12 }} transition={{ duration: 0.2 }}>
+          <div className="space-y-2">
+            <div className={`border rounded-xl p-2 overflow-visible ${isWithout ? 'border-red-200 bg-red-50/50' : 'border-green-200 bg-green-50/50'}`}>
+              <SimDAG
+                nodeStates={sim.nodeStates}
+                changedId={5}
+                deferredIds={isWithout ? undefined : [0,1,2,3]}
+                uid={isWithout ? 'sci-wo' : 'sci-w'}
+              />
+            </div>
+            {sim.summary && <p className={`text-[10px] font-medium ${isWithout ? 'text-red-600' : 'text-green-600'}`}>{sim.summary}</p>}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-gray-500">
+        {simLegend.map(l => (
+          <div key={l.label} className="flex items-center gap-1">
+            <span className={`w-2.5 h-2.5 rounded border ${l.color}`} />
+            {l.label}
+          </div>
+        ))}
+        <div className="flex items-center gap-1">
+          <span className={`w-2.5 h-2.5 rounded ${modifiedLegend.border} border-2 bg-white`} />
+          {modifiedLegend.label}
+        </div>
+      </div>
+
+      {!sim.hasRun && (
+        <p className="text-[10px] text-gray-400 text-center">Click &quot;Run simulation&quot; to compare full rebuild vs slim CI</p>
+      )}
+    </div>
+  )
+}
+
+function QAStep2() {
+  const [mode, setMode] = useState('deferral')
+
+  return (
+    <div className="w-full space-y-4">
       {/* Step headline */}
       <div className="flex items-start gap-4">
         <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">2</div>
         <div>
           <h4 className="font-bold text-gray-900 text-lg leading-tight">Deferral + Slim CI: Run Only What Changed</h4>
           <p className="text-gray-500 text-sm mt-1">
-            The CI job uses two techniques together: <strong>deferral</strong> (read unchanged upstream results from production instead of rebuilding them) and <strong>slim CI</strong> (only build and test the changed model and its downstream dependents).
+            dbt runs only net changes and their downstream impact, using production (or staging) data.
           </p>
         </div>
       </div>
 
-      {/* Slim CI */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Slim CI: build only the changed model + its children</p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Without slim CI */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-red-100 border border-red-300 text-red-600 text-xs flex items-center justify-center font-bold shrink-0">✗</span>
-              <p className="text-xs font-semibold text-gray-600">Without slim CI: rebuilds all 7</p>
-            </div>
-            <div className="border border-red-200 rounded-xl p-3 bg-red-50">
-              <SelectiveDAG changedIds={[5]} runIds={ALL} uid="full" />
-            </div>
-          </div>
-
-          {/* With slim CI + deferral code panels */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-green-100 border border-green-300 text-green-600 text-xs flex items-center justify-center font-bold shrink-0">✓</span>
-              <p className="text-xs font-semibold text-gray-600">With slim CI: builds changed + downstream only</p>
-            </div>
-            <div className="border border-green-200 rounded-xl p-3 bg-green-50 overflow-visible">
-              <SelectiveDAG changedIds={[5]} runIds={SLIM} uid="slim" showDeferralHighlight />
-            </div>
-          </div>
-        </div>
-
-        {/* Code panels — full width, green left border ties to "With slim CI" */}
-        <div className="border-l-4 border-green-400 pl-4 space-y-3 mt-2">
-          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Deferral: how ref() resolves to production at runtime</p>
-          <div className="flex items-stretch gap-3">
-            <div className="flex-1 min-w-0 border border-gray-200 rounded-lg p-3 bg-gray-50 text-xs font-mono text-gray-700 leading-relaxed overflow-x-auto">
-              <div className="text-gray-400 mb-1">int_enriched_orders.sql</div>
-              <div><span className="text-blue-600">with</span> orders <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {'{{ '}ref(<span className="text-green-600">'stg_orders'</span>){' }}'}</div>
-              <div>{'),'}</div>
-              <div>products <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {'{{ '}ref(<span className="text-green-600">'stg_product'</span>){' }}'}</div>
-              <div>{')'}</div>
-            </div>
-            <div className="shrink-0 self-center text-gray-400 text-lg">→</div>
-            <div className="flex-1 min-w-0 border border-blue-200 rounded-lg p-3 bg-blue-50 text-xs font-mono text-gray-700 leading-relaxed overflow-x-auto">
-              <div className="text-gray-400 mb-1">compiled (deferred)</div>
-              <div><span className="text-blue-600">with</span> orders <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> <span className="text-amber-600">PROD.analytics.stg_orders</span></div>
-              <div>{'),'}</div>
-              <div>products <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> <span className="text-amber-600">PROD.analytics.stg_product</span></div>
-              <div>{')'}</div>
-            </div>
-          </div>
+      {/* Toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-gray-100 rounded-xl p-1">
+          {[{ key: 'deferral', label: 'Deferral' }, { key: 'slimci', label: 'Slim CI' }].map(t => (
+            <button
+              key={t.key}
+              onClick={() => setMode(t.key)}
+              className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      <AnimatePresence mode="wait">
+        {mode === 'deferral' ? (
+          <motion.div key="deferral" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.25 }}>
+            <DeferralSim />
+          </motion.div>
+        ) : (
+          <motion.div key="slimci" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }}>
+            <SlimCISim />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
