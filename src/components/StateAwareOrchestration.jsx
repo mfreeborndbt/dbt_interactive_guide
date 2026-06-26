@@ -68,18 +68,18 @@ const scenarios = {
   },
   update_all: {
     label: 'Advanced Configuration',
-    desc: <>raw_orders gets new data. int_enriched_orders has <code className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[11px] font-mono font-bold">update: all</code> configured.</>,
+    desc: <>raw_orders gets new data. int_enriched_orders has <code className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[11px] font-mono font-bold">require_fresh_data_from: all</code> configured.</>,
     steps: [
       { action: 'freshness', ids: ['raw_orders'], label: 'New data detected in raw_orders' },
       { action: 'skip', ids: ['stg_customers', 'stg_geoinfo', 'stg_product'], label: 'No new data upstream. Skip.' },
       { action: 'build', ids: ['stg_orders'] },
       { action: 'complete', ids: ['stg_orders'] },
       { action: 'skip', ids: ['int_enriched_customer'], label: 'No upstream changes. Skip.' },
-      { action: 'check', ids: ['int_enriched_orders'], label: 'int_enriched_orders has update: all. Checking parents.' },
-      { action: 'config_skip', ids: ['int_enriched_orders'], label: 'stg_product did not update. Blocked by update: all.' },
+      { action: 'check', ids: ['int_enriched_orders'], label: 'int_enriched_orders has require_fresh_data_from: all. Checking parents.' },
+      { action: 'config_skip', ids: ['int_enriched_orders'], label: 'stg_product did not update. Blocked by require_fresh_data_from: all.' },
       { action: 'skip', ids: ['fct_orders_with_customers_details'], label: 'No upstream parents updated. Skip.' },
     ],
-    terminalSummary: 'Rebuilt 1 model, skipped 6. int_enriched_orders blocked by update: all since not all parents updated.',
+    terminalSummary: 'Rebuilt 1 model, skipped 6. int_enriched_orders blocked by require_fresh_data_from: all since not all parents updated.',
     terminalType: 'info',
   },
 }
@@ -244,7 +244,7 @@ export default function StateAwareOrchestration() {
             step.ids.forEach(id => { next[id] = 'config_skip' })
             return next
           })
-          addLines(step.ids.map(id => ({ text: `  BLOCKED analytics.${id} [update: all] not all parents updated`, type: 'warn' })))
+          addLines(step.ids.map(id => ({ text: `  BLOCKED analytics.${id} [require_fresh_data_from: all] not all parents updated`, type: 'warn' })))
         }
       }, delay)
       timeoutsRef.current.push(t)
@@ -453,7 +453,7 @@ export default function StateAwareOrchestration() {
                     />
                   </>
                 )}
-                {/* Config skip: update:all badge */}
+                {/* Config skip: require_fresh_data_from:all badge */}
                 {state === 'config_skip' && (
                   <>
                     <motion.rect
@@ -513,7 +513,7 @@ export default function StateAwareOrchestration() {
               { color: 'bg-amber-100 border-amber-400', label: 'Wasted Compute', key: 'wasted' },
               { color: 'bg-indigo-200 border-indigo-400', label: 'Reused', key: 'reused' },
               { color: 'bg-gray-200 border-gray-400', label: 'Skipped', key: 'skipped' },
-              { color: 'bg-amber-100 border-amber-400', label: 'Blocked (update: all)', key: 'config_skip' },
+              { color: 'bg-amber-100 border-amber-400', label: 'Blocked (require_fresh_data_from: all)', key: 'config_skip' },
             ].map(item => {
               const isHighlighted =
                 (item.key === 'wasted' && hasWasted) ||
