@@ -32,6 +32,9 @@ import DbtMesh from './components/DbtMesh'
 // Semantic Layer components
 import SemanticLayer from './components/SemanticLayer'
 
+// AI components
+import SelfServiceDev from './components/SelfServiceDev'
+
 const topTabs = [
   { key: 'architecture', label: 'Architecture & Environments' },
   { key: 'models', label: 'dbt Models' },
@@ -40,6 +43,7 @@ const topTabs = [
   { key: 'orchestration', label: 'Orchestration' },
   { key: 'mesh', label: 'Mesh' },
   { key: 'semantic', label: 'Semantic Layer' },
+  { key: 'ai', label: 'AI' },
 ]
 
 // Orchestration sub-config
@@ -415,6 +419,7 @@ const tabDescriptions = {
   orchestration: 'How dbt orchestration makes data pipelines simpler, faster, and cheaper.',
   mesh: 'Scale from one project to many with governed model sharing, scoped lineage, and safe versioning.',
   semantic: 'A governed metrics layer that turns questions into correct SQL for LLMs, apps, and BI.',
+  ai: 'AI-powered model creation and visual exploration — build dbt models without writing SQL from scratch.',
 }
 
 export default function App() {
@@ -438,7 +443,7 @@ export default function App() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`px-4 md:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-3 md:px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap min-w-[60px] text-center ${
                     activeTab === tab.key
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-300 hover:text-white hover:bg-white/10'
@@ -500,6 +505,11 @@ export default function App() {
         {activeTab === 'semantic' && (
           <motion.div key="semantic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
             <SemanticLayer />
+          </motion.div>
+        )}
+        {activeTab === 'ai' && (
+          <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+            <SelfServiceDev />
           </motion.div>
         )}
       </AnimatePresence>
