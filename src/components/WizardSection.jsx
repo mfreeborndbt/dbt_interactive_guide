@@ -317,11 +317,6 @@ function IntelligenceContent({ mode }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-xs font-bold text-gray-900 mb-0.5">{mode === 'without' ? 'Generic coding agent' : 'dbt Wizard'}</p>
-              <p className="text-[10px] text-gray-500">
-                {mode === 'without'
-                  ? 'No project context. Guesses values from general knowledge.'
-                  : 'Queries the data, observes, fixes inconsistencies, then writes and validates.'}
-              </p>
             </div>
             <button
               onClick={handleRun}
@@ -757,8 +752,7 @@ function ScopeContent({ mode }) {
           <div className="border border-gray-200 rounded-xl p-4 bg-white">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div>
-                <p className="text-xs font-bold text-gray-900 mb-0.5">Scope: your local codebase only</p>
-                <p className="text-[10px] text-gray-500">No production visibility. Dev passing doesn't mean production will.</p>
+                <p className="text-xs font-bold text-gray-900 mb-0.5">Generic coding agent</p>
               </div>
             </div>
 
@@ -805,7 +799,7 @@ function ScopeContent({ mode }) {
           <div className="border border-gray-200 rounded-xl p-4 bg-white">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div>
-                <p className="text-xs font-bold text-gray-900 mb-0.5">Scope: across environments, including production</p>
+                <p className="text-xs font-bold text-gray-900 mb-0.5">dbt Wizard</p>
                 <p className="text-[10px] text-gray-500">dbt Wizard can troubleshoot failed jobs and read from production after making changes, so it can confirm work will hold up in other environments.</p>
               </div>
             </div>
@@ -972,7 +966,7 @@ function MetadataGraph() {
   )
 }
 
-function TokenUsage({ mode, runId, onDone }) {
+function TokenUsage({ mode, runId, onDone, onRun }) {
   const prefersReduced = useReducedMotion()
   const [visibleFiles, setVisibleFiles] = useState(0)
   const [showResult, setShowResult] = useState(false)
@@ -1028,7 +1022,20 @@ function TokenUsage({ mode, runId, onDone }) {
 
   return (
     <div className="border border-gray-200 rounded-xl p-4 bg-white">
-      <SectionLabel>Token usage</SectionLabel>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-xs font-bold text-gray-900 mb-0.5">{mode === 'without' ? 'Generic coding agent' : 'dbt Wizard'}</p>
+        </div>
+        <button
+          onClick={() => { if (onRun) onRun() }}
+          disabled={hasContent && !showResult}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all duration-150 shrink-0 ml-4 ${
+            (hasContent && !showResult) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}
+        >
+          {(hasContent && !showResult) ? 'Running...' : hasContent ? 'Run again' : 'Run simulation'}
+        </button>
+      </div>
 
       <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4">
         <p className="text-[10px] text-gray-400 font-medium mb-0.5">Prompt</p>
@@ -1151,11 +1158,11 @@ function TokenUsage({ mode, runId, onDone }) {
   )
 }
 
-function TokenContent({ mode, runId, onDone }) {
+function TokenContent({ mode, runId, onDone, onRun }) {
   return (
     <AnimatePresence mode="wait">
       <motion.div key={`tokens-${mode}`} {...fadeSlide}>
-        <TokenUsage mode={mode} runId={runId} onDone={onDone} />
+        <TokenUsage mode={mode} runId={runId} onDone={onDone} onRun={onRun} />
       </motion.div>
     </AnimatePresence>
   )
@@ -1355,11 +1362,6 @@ function VisualOutputsContent({ mode }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-xs font-bold text-gray-900 mb-0.5">{mode === 'without' ? 'Generic coding agent' : 'dbt Wizard'}</p>
-              <p className="text-[10px] text-gray-500">
-                {mode === 'without'
-                  ? 'Outputs raw SQL — you parse the rest yourself.'
-                  : 'Outputs SQL plus a Canvas view of the same logic.'}
-              </p>
             </div>
             <button
               onClick={handleRun}
@@ -1441,9 +1443,6 @@ export default function WizardSection() {
         </div>
         <div className="flex items-center gap-3">
           <Toggle value={mode} onChange={handleModeChange} />
-          {activeTopic === 'tokens' && (
-            <PlayButton playing={playing} hasPlayed={hasPlayed} onPlay={handlePlay} />
-          )}
         </div>
       </div>
 
@@ -1475,7 +1474,7 @@ export default function WizardSection() {
         )}
         {activeTopic === 'tokens' && (
           <motion.div key="tokens" id="panel-tokens" role="tabpanel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-            <TokenContent mode={mode} runId={tokenRunId} onDone={() => setPlaying(false)} />
+            <TokenContent mode={mode} runId={tokenRunId} onDone={() => setPlaying(false)} onRun={handlePlay} />
           </motion.div>
         )}
         {activeTopic === 'visual' && (
