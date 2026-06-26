@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import CanvasSection from './CanvasSection'
 
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Design tokens (matches existing app)
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
 const NAVY = '#111827'
 const GREEN = '#059669'
 const GREEN_LIGHT = '#f0fdf4'
@@ -21,9 +21,9 @@ const fadeSlide = {
   transition: { duration: 0.3 },
 }
 
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Tabs & descriptions
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
 const topics = [
   { key: 'intelligence', label: 'Intelligence' },
   { key: 'scope', label: 'Scope' },
@@ -35,12 +35,12 @@ const topicDescs = {
   intelligence: 'dbt Wizard understands the right validation checks and always routes to the right tool. It self-validates before showing you anything.',
   scope: 'dbt Wizard can troubleshoot failed jobs and read from production after making changes, so it can confirm work will hold up in other environments.',
   tokens: "dbt's native metadata engine retrieves exactly what the agent needs before it writes a single line, so you get more accurate output while spending fewer tokens.",
-  visual: 'With Wizard, the same model can be read as SQL or as a Canvas -- so anyone can understand what the logic does, not just people who read SQL.',
+  visual: 'With Wizard, the same model can be read as SQL or as a Canvas — so anyone can understand what the logic does, not just people who read SQL.',
 }
 
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Toggle (kept from original)
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
 function Toggle({ value, onChange }) {
   return (
     <div className="inline-flex bg-gray-100 rounded-xl p-1" role="radiogroup" aria-label="Comparison mode">
@@ -68,9 +68,9 @@ function Toggle({ value, onChange }) {
   )
 }
 
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Play button
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
 function PlayButton({ playing, hasPlayed, onPlay }) {
   return (
     <button
@@ -85,228 +85,375 @@ function PlayButton({ playing, hasPlayed, onPlay }) {
   )
 }
 
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Shared animation helpers
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
+function useLoopIndex(items, intervalMs, enabled = true) {
+  const [index, setIndex] = useState(0)
+  const prefersReduced = useReducedMotion()
+  useEffect(() => {
+    if (!enabled || prefersReduced) return
+    const id = setInterval(() => setIndex(i => (i + 1) % items.length), intervalMs)
+    return () => clearInterval(id)
+  }, [items.length, intervalMs, enabled, prefersReduced])
+  useEffect(() => { setIndex(0) }, [enabled])
+  return index
+}
+
 function SectionLabel({ children }) {
   return <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">{children}</p>
 }
 
-const STEP_DELAY = 1200
-const STEP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
+/* ═══════════════════════════════════════════════════
+   SECTION 1 — Intelligence
+   ═══════════════════════════════════════════════════ */
 
-function stepStyle(visible) {
-  return {
-    opacity: visible ? 1 : 0,
-    transform: visible ? 'translateY(0)' : 'translateY(8px)',
-    transition: `opacity 0.4s ${STEP_EASE}, transform 0.4s ${STEP_EASE}`,
-  }
-}
+/* ─── Intelligence: Without side ─── */
+const WITHOUT_PROBLEMS = [
+  {
+    label: 'No project conventions loaded', icon: '?',
+    means: 'A generic agent does not know your naming standards, folder layout, or materialization defaults, so it invents its own.',
+    example: 'It writes a model called customers_final when your standard is dim_customers, and uses a CTE style your linter rejects.',
+  },
+  {
+    label: 'No lineage or model relationships', icon: '?',
+    means: 'It cannot see your DAG, so it does not know what feeds what or what sits downstream.',
+    example: 'Asked to change a column in stg_orders, it has no idea that 12 models depend on it, so it cannot warn you what will break.',
+  },
+  {
+    label: 'No test or contract awareness', icon: '?',
+    means: 'It does not know which tests and contracts exist, so it cannot tell whether a change violates them.',
+    example: 'It renames a column that a downstream not_null test relies on, and the failure only shows up when the build runs.',
+  },
+  {
+    label: 'Re-paste your standards every session', icon: '?',
+    means: 'It keeps no project memory, so every new session starts from zero.',
+    example: 'You paste your style guide and model list at the start of every chat, and still get drift halfway through.',
+  },
+  {
+    label: 'Generates code it can\u2019t validate', icon: '!',
+    means: 'It can write SQL but cannot compile it, run tests, or check downstream impact, so the output is unverified.',
+    example: 'It produces a model that references a column that does not exist, with no way to catch it before you run.',
+  },
+]
 
-/* ===================================================
-   SECTION 1 -- Intelligence
-   =================================================== */
+/* ─── Intelligence: With side ─── */
+const WIZARD_SKILLS = [
+  {
+    label: 'Analytics engineering',
+    detail: 'Knows staging/intermediate/mart layering, ref() patterns, and how to structure incremental models. Follows your project conventions automatically.',
+  },
+  {
+    label: 'Semantic layer',
+    detail: 'Understands metrics, dimensions, entities, and time spines. Can create and modify semantic models that compile correctly on the first pass.',
+  },
+  {
+    label: 'Testing patterns',
+    detail: 'Generates the right tests for the context: not_null, unique, accepted_values, relationships. Knows when to add a test and when one already covers the case.',
+  },
+  {
+    label: 'Migration workflow',
+    detail: 'Classifies compatibility errors during platform migrations and applies validated fixes. Knows dialect differences between Snowflake, Databricks, BigQuery, and others.',
+  },
+  {
+    label: 'Documentation',
+    detail: 'Writes model and column descriptions that match your existing style. Generates doc blocks and keeps YAML in sync with SQL changes.',
+  },
+]
 
-const INTEL_PROMPT = '"Add a not_null test to the customer_id column on stg_orders"'
+const VALIDATIONS = [
+  {
+    change: 'SQL generation', check: 'compile',
+    detail: 'Every generated SQL statement is compiled against the project before surfacing. Syntax errors and missing refs are caught immediately.',
+  },
+  {
+    change: 'Test generation', check: 'run new tests',
+    detail: 'New tests are executed, not just written. You see pass/fail results before the diff is shown.',
+  },
+  {
+    change: 'Refactor', check: 'verify downstream ref()s',
+    detail: 'When a model is renamed or a column changes, all downstream ref() calls are checked to confirm they still resolve.',
+  },
+  {
+    change: 'Contract change', check: 'check schema compatibility',
+    detail: 'Schema contracts are validated so downstream consumers are not broken by column type or naming changes.',
+  },
+  {
+    change: 'Semantic model', check: 'compile semantic defs',
+    detail: 'Semantic model YAML is compiled to confirm measures, dimensions, and entities are valid before any change is proposed.',
+  },
+  {
+    change: 'Job investigation', check: 'analyze run results',
+    detail: 'Pulls the failed run, identifies the failing model and error, and traces the root cause through logs and lineage.',
+  },
+]
 
-/* --- Intelligence Simulator --- */
-function IntelSimulator({ mode, runId, onDone }) {
-  const [step, setStep] = useState(0)
-  const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
-
-  const withSteps = [
-    { type: 'action', label: 'Querying project metadata for stg_orders...' },
-    { type: 'query', label: 'select * from stg_orders where customer_id is null limit 5' },
-    {
-      type: 'table',
-      label: 'Results',
-      rows: [
-        { order_id: '10491', customer_id: 'NULL', order_date: '2024-03-11', amount: '42.00' },
-        { order_id: '10517', customer_id: 'NULL', order_date: '2024-03-12', amount: '18.50' },
-      ],
-    },
-    { type: 'bad-row', label: '2 null customer_id rows found in dev data. Fixing source before adding test.' },
-    {
-      type: 'sql',
-      label: 'Fix SQL',
-      code: "-- stg_orders.sql\nwhere customer_id is not null  -- filter bad source rows",
-    },
-    {
-      type: 'yaml',
-      label: 'YAML scaffold',
-      code: 'models:\n  - name: stg_orders\n    columns:\n      - name: customer_id\n        tests:\n          - not_null',
-      status: 'pending',
-    },
-    { type: 'confirm', label: 'Test values confirmed', values: ['not_null on customer_id'], color: 'green' },
-    { type: 'action', label: 'dbt build --select stg_orders...' },
-    { type: 'validate', label: 'All tests pass. 0 null rows remain.', pass: true },
-    {
-      type: 'takeaway',
-      text: 'dbt Wizard checked the data first, found nulls, fixed the source filter, then added the test. The test passes on the first try.',
-    },
-  ]
-
-  const withoutSteps = [
-    { type: 'action', label: 'Reading stg_orders.sql...' },
-    {
-      type: 'yaml',
-      label: 'YAML scaffold',
-      code: 'models:\n  - name: stg_orders\n    columns:\n      - name: customer_id\n        tests:\n          - not_null',
-      status: 'guessed',
-    },
-    { type: 'confirm', label: 'Guessed values (unverified)', values: ['not_null on customer_id'], color: 'amber' },
-    { type: 'validate', label: 'FAILED: 2 rows with null customer_id', pass: false },
-    {
-      type: 'takeaway',
-      text: 'Without project context or data access, the agent added the test without checking whether the data would pass. The test fails immediately.',
-    },
-  ]
-
-  const steps = mode === 'with' ? withSteps : withoutSteps
-
-  useEffect(() => {
-    setStep(0)
-    if (runId === 0) return
-    let i = 0
-    const iv = setInterval(() => {
-      i += 1
-      if (i >= steps.length) {
-        clearInterval(iv)
-        onDoneRef.current?.()
-        return
-      }
-      setStep(i)
-    }, STEP_DELAY)
-    // show first step immediately
-    setStep(0)
-    return () => clearInterval(iv)
-  }, [runId, mode, steps.length])
-
-  if (runId === 0) {
-    return <div className="py-8 text-center text-xs text-gray-300">Press "Run simulation" to begin</div>
-  }
+function IntelligenceContent({ mode }) {
+  const [expandedRow, setExpandedRow] = useState(null)
+  const [expandedSkill, setExpandedSkill] = useState(null)
+  const [expandedValidation, setExpandedValidation] = useState(null)
+  const [openSection, setOpenSection] = useState('skills')
 
   return (
-    <div className="border border-gray-200 rounded-xl p-4 bg-white space-y-2">
-      <SectionLabel>{mode === 'with' ? 'dbt Wizard' : 'Generic agent'}</SectionLabel>
-      {steps.map((s, i) => {
-        const visible = i <= step
-        return (
-          <div key={`${mode}-${i}`} style={stepStyle(visible)}>
-            {s.type === 'action' && (
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-                <span className="text-blue-500">{'>'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'query' && (
-              <div className="bg-gray-900 text-green-400 font-mono text-[10px] px-3 py-2 rounded-lg">
-                {s.label}
-              </div>
-            )}
-            {s.type === 'table' && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full text-[10px]">
-                  <thead>
-                    <tr className="bg-gray-50 text-left text-[9px] text-gray-400 uppercase tracking-wider">
-                      {Object.keys(s.rows[0]).map((k) => (
-                        <th key={k} className="px-2 py-1 font-semibold">{k}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {s.rows.map((row, ri) => (
-                      <tr key={ri} className="border-t border-gray-100">
-                        {Object.entries(row).map(([k, v]) => (
-                          <td
-                            key={k}
-                            className={`px-2 py-1 font-mono ${v === 'NULL' ? 'text-red-500 font-semibold' : 'text-gray-700'}`}
+    <AnimatePresence mode="wait">
+      <motion.div key={`intel-${mode}`} {...fadeSlide}>
+        {mode === 'without' ? (
+          <div className="space-y-3">
+            <div className="border border-gray-200 rounded-xl p-4 bg-white">
+              <SectionLabel>What a generic coding agent does</SectionLabel>
+              <p className="text-[10px] text-gray-400 mb-3">No dbt project context. No skills. No validation.</p>
+              <div className="space-y-2">
+                {WITHOUT_PROBLEMS.map((p, i) => {
+                  const isOpen = expandedRow === i
+                  return (
+                    <motion.div
+                      key={p.label}
+                      layout
+                      whileHover={!isOpen ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' } : {}}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="bg-red-50/50 border border-red-200/60 rounded-lg overflow-hidden"
+                    >
+                      <button
+                        onClick={() => setExpandedRow(isOpen ? null : i)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedRow(isOpen ? null : i) } }}
+                        aria-expanded={isOpen}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-left cursor-pointer"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                          <span className="text-red-500 text-[10px] font-bold">{p.icon}</span>
+                        </div>
+                        <p className="text-xs text-gray-700 flex-1">{p.label}</p>
+                        <motion.svg
+                          width="12" height="12" viewBox="0 0 12 12"
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-red-300 shrink-0"
+                        >
+                          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        </motion.svg>
+                      </button>
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
                           >
-                            {v}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <div className="px-3 pb-3 ml-9 space-y-1.5">
+                              <div>
+                                <p className="text-[10px] font-semibold text-gray-500">What it means</p>
+                                <p className="text-[10px] text-gray-600 leading-relaxed">{p.means}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-semibold text-gray-500">Example</p>
+                                <p className="text-[10px] text-gray-600 leading-relaxed italic">{p.example}</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )
+                })}
               </div>
-            )}
-            {s.type === 'bad-row' && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 font-medium animate-pulse">
-                <span>!</span> {s.label}
+            </div>
+            <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center shrink-0">
+                  <span className="text-amber-700 text-[10px] font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-amber-800">Output is unchecked</p>
+                  <p className="text-[10px] text-amber-600">Code may not compile, tests aren&apos;t run, downstream impact unknown</p>
+                </div>
               </div>
-            )}
-            {s.type === 'sql' && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-[10px] text-gray-700 whitespace-pre">
-                {s.code}
-              </div>
-            )}
-            {s.type === 'yaml' && (
-              <div
-                className={`border rounded-lg px-3 py-2 font-mono text-[10px] whitespace-pre ${
-                  s.status === 'guessed'
-                    ? 'bg-amber-50/50 border-amber-200 text-amber-800'
-                    : 'bg-gray-50 border-gray-200 text-gray-700'
-                }`}
-                style={
-                  s.status === 'pending'
-                    ? { animation: 'pulse 2s ease-in-out infinite' }
-                    : undefined
-                }
-              >
-                {s.code}
-              </div>
-            )}
-            {s.type === 'confirm' && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-medium border ${
-                s.color === 'green'
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-amber-50 border-amber-200 text-amber-800'
-              }`}>
-                <span>{s.color === 'green' ? '\u2713' : '?'}</span>
-                <span>{s.label}: {s.values.join(', ')}</span>
-              </div>
-            )}
-            {s.type === 'validate' && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-semibold border ${
-                s.pass
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-red-50 border-red-200 text-red-700'
-              }`}
-              style={!s.pass ? { animation: 'pulse 2s ease-in-out infinite' } : undefined}
-              >
-                <span>{s.pass ? '\u2713' : '\u2717'}</span>
-                <span>{s.label}</span>
-              </div>
-            )}
-            {s.type === 'takeaway' && (
-              <div className="border-t border-gray-100 pt-3 mt-2">
-                <p className="text-xs text-gray-600 leading-relaxed">{s.text}</p>
-              </div>
-            )}
+            </div>
           </div>
-        )
-      })}
-    </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Skills */}
+            <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+              <button
+                onClick={() => setOpenSection(openSection === 'skills' ? null : 'skills')}
+                aria-expanded={openSection === 'skills'}
+                className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <SectionLabel>dbt Agent Skills + project context</SectionLabel>
+                  <p className="text-[10px] text-gray-400">Reusable, governed skills load automatically. Add your own as SKILL.md files.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <span className="text-[9px] font-medium text-gray-400">{WIZARD_SKILLS.length} skills</span>
+                  <motion.svg width="14" height="14" viewBox="0 0 14 14" animate={{ rotate: openSection === 'skills' ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-gray-400">
+                    <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  </motion.svg>
+                </div>
+              </button>
+              <AnimatePresence>
+                {openSection === 'skills' && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                    <div className="px-4 pb-4 space-y-2">
+                {WIZARD_SKILLS.map((s, i) => {
+                  const isOpen = expandedSkill === i
+                  return (
+                    <motion.div
+                      key={s.label}
+                      layout
+                      whileHover={!isOpen ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' } : {}}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="bg-green-50 border border-green-200 rounded-lg overflow-hidden"
+                    >
+                      <button
+                        onClick={() => setExpandedSkill(isOpen ? null : i)}
+                        aria-expanded={isOpen}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left cursor-pointer"
+                      >
+                        <span className="text-green-600 text-[10px] font-bold shrink-0">&#10003;</span>
+                        <span className="text-[10px] font-medium text-gray-700 flex-1">{s.label}</span>
+                        <motion.svg
+                          width="12" height="12" viewBox="0 0 12 12"
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-green-300 shrink-0"
+                        >
+                          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        </motion.svg>
+                      </button>
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-3 pb-2.5 ml-5">
+                              <p className="text-[10px] text-gray-600 leading-relaxed">{s.detail}</p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )
+                })}
+                {/* Custom skill */}
+                <motion.div
+                  whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 cursor-default"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-blue-600 text-[10px] font-bold">+</span>
+                    <span className="text-[10px] font-medium text-blue-700">custom-style</span>
+                  </div>
+                  <p className="text-[9px] text-gray-400 mt-0.5 font-mono">.agents/skills/SKILL.md</p>
+                </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Validations */}
+            <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+              <button
+                onClick={() => setOpenSection(openSection === 'validations' ? null : 'validations')}
+                aria-expanded={openSection === 'validations'}
+                className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div>
+                  <SectionLabel>Self-validates before showing you anything</SectionLabel>
+                  <p className="text-[10px] text-gray-400">Each change type is checked automatically before the diff is surfaced.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <span className="text-[9px] font-medium text-gray-400">{VALIDATIONS.length} checks</span>
+                  <motion.svg width="14" height="14" viewBox="0 0 14 14" animate={{ rotate: openSection === 'validations' ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-gray-400">
+                    <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  </motion.svg>
+                </div>
+              </button>
+              <AnimatePresence>
+                {openSection === 'validations' && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                    <div className="px-4 pb-4 space-y-2">
+                {VALIDATIONS.map((v, i) => {
+                  const isOpen = expandedValidation === i
+                  return (
+                    <motion.div
+                      key={v.change}
+                      layout
+                      whileHover={!isOpen ? { y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' } : {}}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden"
+                    >
+                      <button
+                        onClick={() => setExpandedValidation(isOpen ? null : i)}
+                        aria-expanded={isOpen}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left cursor-pointer"
+                      >
+                        <span className="text-green-500 text-[10px] font-bold shrink-0">&#10003;</span>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-medium text-gray-700">{v.change}</p>
+                          <p className="text-[9px] text-gray-400">{v.check}</p>
+                        </div>
+                        <motion.svg
+                          width="12" height="12" viewBox="0 0 12 12"
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-gray-300 shrink-0"
+                        >
+                          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        </motion.svg>
+                      </button>
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-3 pb-2.5 ml-5">
+                              <p className="text-[10px] text-gray-600 leading-relaxed">{v.detail}</p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )
+                })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Output callout */}
+            <div className="border border-green-200 bg-green-50/50 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                  <span className="text-white text-[10px] font-bold">&#10003;</span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-green-800">Only validated diffs are surfaced</p>
+                  <p className="text-[10px] text-green-600">Checks pass before you see anything. If a check fails, it adjusts and retries.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
-/* --- Intelligence Content --- */
-function IntelligenceContent({ mode, runId, onDone }) {
-  return (
-    <div>
-      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4">
-        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Prompt</p>
-        <p className="text-xs text-gray-700 font-medium italic">{INTEL_PROMPT}</p>
-      </div>
-      <IntelSimulator mode={mode} runId={runId} onDone={onDone} />
-    </div>
-  )
-}
-
-/* ===================================================
-   SECTION 2 -- Scope
-   =================================================== */
+/* ═══════════════════════════════════════════════════
+   SECTION 2 — Scope (static comparison)
+   ═══════════════════════════════════════════════════ */
 
 const SCOPE_WITHOUT_POINTS = [
   'No concept of production. You cannot see what is running live or what the production data looks like.',
@@ -314,304 +461,274 @@ const SCOPE_WITHOUT_POINTS = [
   'No way to know how a change behaves elsewhere. Passing in dev does not mean it passes in production.',
 ]
 
-/* --- Scope "With" Simulator --- */
-function ScopeSimulator({ scenario, runId, onDone }) {
-  const [step, setStep] = useState(0)
-  const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
-
-  const debugSteps = [
-    { type: 'action', label: 'Fetching failed job run #4821...' },
-    { type: 'error', label: 'Job #4821 FAILED -- 1 of 23 models errored' },
-    { type: 'action', label: 'Identifying errored model...' },
-    { type: 'detail', label: 'fct_order_items: ambiguous column reference "order_date"' },
-    { type: 'action', label: 'Tracing root cause through lineage...' },
-    { type: 'detail', label: 'order_date now exists in both stg_orders and stg_payments after recent join change' },
-    { type: 'fix', before: 'select order_date', after: 'select orders.order_date' },
-    {
-      type: 'takeaway',
-      text: 'dbt Wizard detected the failure, pinpointed the ambiguous column, traced the root cause through lineage, and proposed a qualified fix. No one had to report the problem.',
-    },
-  ]
-
-  const refactorSteps = [
-    { type: 'action', label: 'Refactoring int_accounts: moving customer_status from CASE to source...' },
-    { type: 'action', label: 'dbt parse passed. Compiling int_accounts...' },
-    { type: 'action', label: 'Compiled successfully. Running dbt compare...' },
-    { type: 'compare', label: 'Row count', prod: '48,210', dev: '48,210', match: true },
-    {
-      type: 'compare-table',
-      rows: [
-        { status: 'active', prod: '31,402', dev: '31,402' },
-        { status: 'prospect', prod: '12,118', dev: '12,118' },
-        { status: 'churned', prod: '4,690', dev: '4,690' },
-      ],
-    },
-    { type: 'detail', label: 'Mismatch: 0 rows. customer_status values match across environments.' },
-    { type: 'action', label: 'Running downstream tests...' },
-    { type: 'validate', label: 'All 6 downstream tests pass', pass: true },
-    { type: 'action', label: 'Re-comparing with production after downstream builds...' },
-    {
-      type: 'takeaway',
-      text: 'dbt Wizard compared dev output against the last production run, confirmed row counts and column values match, and validated downstream tests. The refactor is safe to ship.',
-    },
-  ]
-
-  const steps = scenario === 'debug' ? debugSteps : refactorSteps
-
-  useEffect(() => {
-    setStep(0)
-    if (runId === 0) return
-    let i = 0
-    const iv = setInterval(() => {
-      i += 1
-      if (i >= steps.length) {
-        clearInterval(iv)
-        onDoneRef.current?.()
-        return
-      }
-      setStep(i)
-    }, STEP_DELAY)
-    setStep(0)
-    return () => clearInterval(iv)
-  }, [runId, scenario, steps.length])
-
-  if (runId === 0) {
-    return <div className="py-8 text-center text-xs text-gray-300">Press "Run simulation" to begin</div>
-  }
+function ScopeContent({ mode }) {
+  const [openItem, setOpenItem] = useState('job')
+  const [activeStep, setActiveStep] = useState('1')
+  const [diffExpanded, setDiffExpanded] = useState(true)
 
   return (
-    <div className="border border-gray-200 rounded-xl p-4 bg-white space-y-2">
-      <SectionLabel>dbt Wizard</SectionLabel>
-      {steps.map((s, i) => {
-        const visible = i <= step
-        return (
-          <div key={`with-${scenario}-${i}`} style={stepStyle(visible)}>
-            {s.type === 'action' && (
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-                <span className="text-blue-500">{'>'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'error' && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-semibold animate-pulse">
-                <span>{'\u2717'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'detail' && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 font-medium">
-                <span>!</span> {s.label}
-              </div>
-            )}
-            {s.type === 'fix' && (
-              <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 font-mono text-[10px] space-y-0.5">
-                <div className="text-red-600 bg-red-50 px-1 rounded">- {s.before}</div>
-                <div className="text-green-700 bg-green-50 px-1 rounded">+ {s.after}</div>
-              </div>
-            )}
-            {s.type === 'compare' && (
-              <div className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-lg text-[10px]">
-                <span className="text-gray-500 font-medium">{s.label}:</span>
-                <span className="font-medium text-gray-700">Prod {s.prod}</span>
-                <span className="text-gray-300">|</span>
-                <span className="font-medium text-gray-700">Dev {s.dev}</span>
-                {s.match && (
-                  <span className="text-green-600 font-semibold text-[9px] bg-green-50 px-1.5 py-0.5 rounded">Match</span>
+    <AnimatePresence mode="wait">
+      <motion.div key={`scope-${mode}`} {...fadeSlide}>
+        {mode === 'without' ? (
+          <div className="border border-gray-200 rounded-xl p-4 bg-white">
+            <p className="text-xs font-bold text-gray-900 mb-1">Scope: your local codebase in VS Code</p>
+            <p className="text-[10px] text-gray-500 mb-3">Without dbt Wizard you are working inside a single codebase and a local development environment. That is the whole picture.</p>
+            <div className="space-y-2">
+              {SCOPE_WITHOUT_POINTS.map((point) => (
+                <motion.div
+                  key={point}
+                  whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className="flex items-start gap-2 px-3 py-2 bg-red-50/50 border border-red-200/60 rounded-lg cursor-default"
+                >
+                  <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-red-500 text-[8px] font-bold">x</span>
+                  </div>
+                  <p className="text-[10px] text-gray-700 leading-relaxed">{point}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="border border-gray-200 rounded-xl p-4 bg-white">
+              <p className="text-xs font-bold text-gray-900 mb-1">Scope: across environments, including production</p>
+              <p className="text-[10px] text-gray-500 mb-3">dbt Wizard can troubleshoot failed jobs and read from production after making changes, so it can confirm work will hold up in other environments.</p>
+            </div>
+
+            {/* Accordion item 1: Job failure diagnosis */}
+            <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+              <button
+                onClick={() => setOpenItem(openItem === 'job' ? null : 'job')}
+                aria-expanded={openItem === 'job'}
+                className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <span className="text-white text-[9px] font-bold">&#10003;</span>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-900">Job failure diagnosis</p>
+                </div>
+                <motion.svg width="14" height="14" viewBox="0 0 14 14" animate={{ rotate: openItem === 'job' ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-gray-400 shrink-0">
+                  <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </motion.svg>
+              </button>
+              <AnimatePresence>
+                {openItem === 'job' && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                    <div className="px-4 pb-4">
+                      <p className="text-[10px] text-gray-400 mb-3">Instead of waiting for someone to report it, dbt Wizard traces the failure automatically.</p>
+                      {/* Clickable step boxes */}
+                      <div className="flex items-stretch gap-2 mb-3">
+                        {[
+                          { step: '1', title: 'Detect', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', lines: ['Job #4821 failed', '1 model errored'] },
+                          { step: '2', title: 'Pinpoint', color: '#d97706', bg: '#fffbeb', border: '#fde68a', lines: ['fct_order_items', 'Ambiguous column'] },
+                          { step: '3', title: 'Fix', color: '#059669', bg: '#f0fdf4', border: '#86efac', lines: ['orders.order_date', 'Compiled + tests pass'] },
+                        ].map((s) => {
+                          const isActive = activeStep === s.step
+                          return (
+                            <button
+                              key={s.step}
+                              onClick={() => setActiveStep(s.step)}
+                              className={`flex-1 rounded-lg p-2.5 border text-left transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 shadow-sm' : 'opacity-60 hover:opacity-90'}`}
+                              style={{ backgroundColor: s.bg, borderColor: s.border, '--tw-ring-color': s.color }}
+                            >
+                              <div className="flex items-center gap-1 mb-1">
+                                <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold" style={{ backgroundColor: s.color }}>{s.step}</div>
+                                <p className="text-[9px] font-bold" style={{ color: s.color }}>{s.title}</p>
+                              </div>
+                              {s.lines.map((line, j) => (
+                                <p key={j} className="text-[9px] text-gray-600 leading-relaxed">{line}</p>
+                              ))}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {/* Detail panel */}
+                      <AnimatePresence mode="wait">
+                        {activeStep === '1' && (
+                          <motion.div key="detect" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
+                            className="border border-red-200 bg-red-50/30 rounded-lg p-3">
+                            <p className="text-[10px] font-semibold text-red-700 mb-1.5">Failed job detected</p>
+                            <div className="space-y-1 text-[10px] text-gray-600">
+                              <p>Job #4821, scheduled run, status <span className="font-semibold text-red-600">Failed</span>.</p>
+                              <p>22 of 23 models passed, 1 errored.</p>
+                              <p>Errored model: <code className="bg-white px-1 rounded text-[9px] font-mono border border-red-200">fct_order_items</code></p>
+                            </div>
+                            <p className="text-[9px] text-gray-400 mt-2">dbt Wizard flagged this automatically, so no one had to report it.</p>
+                          </motion.div>
+                        )}
+                        {activeStep === '2' && (
+                          <motion.div key="pinpoint" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
+                            className="border border-amber-200 bg-amber-50/30 rounded-lg p-3">
+                            <p className="text-[10px] font-semibold text-amber-700 mb-1.5">Root cause pinpointed</p>
+                            <div className="space-y-1 text-[10px] text-gray-600">
+                              <p>Compilation error in <code className="bg-white px-1 rounded text-[9px] font-mono border border-amber-200">fct_order_items</code>:</p>
+                              <p>Ambiguous column reference <code className="bg-white px-1 rounded text-[9px] font-mono border border-amber-200">order_date</code>, which now exists in both <code className="bg-white px-1 rounded text-[9px] font-mono border border-gray-200">stg_orders</code> and <code className="bg-white px-1 rounded text-[9px] font-mono border border-gray-200">stg_payments</code> after a recent join.</p>
+                            </div>
+                            <div className="mt-2 bg-white border border-amber-200 rounded px-2.5 py-1.5 font-mono text-[9px]">
+                              <span className="text-gray-400">select</span> <span className="text-amber-600 font-semibold bg-amber-100 px-0.5 rounded">order_date</span><span className="text-gray-400">,</span> <span className="text-gray-500">customer_id, ...</span>
+                            </div>
+                          </motion.div>
+                        )}
+                        {activeStep === '3' && (
+                          <motion.div key="fix" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
+                            className="border border-green-200 bg-green-50/30 rounded-lg p-3">
+                            <p className="text-[10px] font-semibold text-green-700 mb-1.5">Fix proposed and validated</p>
+                            <div className="bg-white border border-gray-200 rounded px-2.5 py-1.5 font-mono text-[9px] space-y-0.5 mb-2">
+                              <div className="text-red-600 bg-red-50 px-1 rounded">- select order_date</div>
+                              <div className="text-green-700 bg-green-50 px-1 rounded">+ select orders.order_date</div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-[10px]">
+                                <span className="text-green-500 font-bold shrink-0">&#10003;</span>
+                                <span className="text-gray-600"><code className="bg-gray-100 px-1 rounded text-[9px] font-mono">dbt parse</code> passed</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px]">
+                                <span className="text-green-500 font-bold shrink-0">&#10003;</span>
+                                <span className="text-gray-600"><code className="bg-gray-100 px-1 rounded text-[9px] font-mono">fct_order_items</code> compiled successfully</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px]">
+                                <span className="text-green-500 font-bold shrink-0">&#10003;</span>
+                                <span className="text-gray-600">All tests pass</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
-            )}
-            {s.type === 'compare-table' && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full text-[10px]">
-                  <thead>
-                    <tr className="bg-gray-50 text-left text-[9px] text-gray-400 uppercase tracking-wider">
-                      <th className="px-2 py-1 font-semibold">Status</th>
-                      <th className="px-2 py-1 font-semibold text-right">Prod</th>
-                      <th className="px-2 py-1 font-semibold text-right">Dev</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-gray-700">
-                    {s.rows.map((r) => (
-                      <tr key={r.status} className="border-t border-gray-100">
-                        <td className="px-2 py-1 font-mono">{r.status}</td>
-                        <td className="px-2 py-1 text-right">{r.prod}</td>
-                        <td className="px-2 py-1 text-right">{r.dev}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {s.type === 'validate' && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-semibold border ${
-                s.pass ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'
-              }`}>
-                <span>{s.pass ? '\u2713' : '\u2717'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'takeaway' && (
-              <div className="border-t border-gray-100 pt-3 mt-2">
-                <p className="text-xs text-gray-600 leading-relaxed">{s.text}</p>
-              </div>
-            )}
+              </AnimatePresence>
+            </div>
+
+            {/* Accordion item 2: Compare changes against production */}
+            <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+              <button
+                onClick={() => setOpenItem(openItem === 'compare' ? null : 'compare')}
+                aria-expanded={openItem === 'compare'}
+                className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                    <span className="text-white text-[9px] font-bold">&#10003;</span>
+                  </div>
+                  <p className="text-xs font-semibold text-gray-900">Compare changes against production</p>
+                </div>
+                <motion.svg width="14" height="14" viewBox="0 0 14 14" animate={{ rotate: openItem === 'compare' ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-gray-400 shrink-0">
+                  <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </motion.svg>
+              </button>
+              <AnimatePresence>
+                {openItem === 'compare' && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                    <div className="px-4 pb-4 space-y-3">
+                      <span className="inline-block text-[9px] font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">invoke_dbt</span>
+
+                      {/* Validation status */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold text-gray-700">Validation status</p>
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="text-green-500 font-bold shrink-0">&#10003;</span>
+                          <span className="text-gray-600"><code className="bg-gray-100 px-1 rounded text-[9px] font-mono">dbt parse</code> passed and the updated model compiled successfully.</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="text-green-500 font-bold shrink-0">&#10003;</span>
+                          <span className="text-gray-600"><code className="bg-gray-100 px-1 rounded text-[9px] font-mono">dbt compare --select int_accounts</code> completed with matching row counts and no unexpected differences.</span>
+                        </div>
+                      </div>
+
+                      {/* Compare changes panel */}
+                      <div className="border border-gray-200 rounded-lg p-3">
+                        <p className="text-[10px] font-semibold text-gray-700 mb-2">Compare changes</p>
+                        <div className="flex gap-3 mb-3">
+                          <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">Modified: 2</span>
+                          <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">Added: 1</span>
+                          <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200">Removed: 0</span>
+                        </div>
+                        <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Modified</p>
+                        {/* Expandable int_accounts row */}
+                        <div className="border border-amber-200/60 rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => setDiffExpanded(d => !d)}
+                            aria-expanded={diffExpanded}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-amber-50/50 text-left cursor-pointer hover:bg-amber-50 transition-colors"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                              <rect x="1" y="1" width="12" height="12" rx="2" stroke="#d97706" strokeWidth="1.2" />
+                              <path d="M4 5h6M4 7h4M4 9h5" stroke="#d97706" strokeWidth="0.8" strokeLinecap="round" />
+                            </svg>
+                            <code className="text-[10px] font-mono font-medium text-gray-700 flex-1">int_accounts</code>
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Different</span>
+                            <motion.svg width="12" height="12" viewBox="0 0 12 12" animate={{ rotate: diffExpanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="text-amber-400 shrink-0 ml-1">
+                              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                            </motion.svg>
+                          </button>
+                          <AnimatePresence>
+                            {diffExpanded && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                                <div className="px-3 pb-3 space-y-3">
+                                  {/* What changed (logic) */}
+                                  <div>
+                                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 mt-2">What changed (logic)</p>
+                                    <div className="bg-white border border-gray-200 rounded px-2.5 py-1.5 font-mono text-[9px] space-y-0.5">
+                                      <div className="text-red-600 bg-red-50 px-1 rounded">- customer_status derived via CASE over stg_stripe_subscriptions</div>
+                                      <div className="text-green-700 bg-green-50 px-1 rounded">+ customer_status read from accounts source (Salesforce aligned)</div>
+                                      <div className="text-red-600 bg-red-50 px-1 rounded">- join to stg_stripe_subscriptions removed</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Checked against previous production run */}
+                                  <div>
+                                    <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Checked against the previous production run</p>
+                                    <div className="flex items-center gap-3 mb-2 text-[10px]">
+                                      <span className="text-gray-500">Row count:</span>
+                                      <span className="font-medium text-gray-700">Production 48,210</span>
+                                      <span className="text-gray-300">|</span>
+                                      <span className="font-medium text-gray-700">Dev 48,210</span>
+                                      <span className="text-green-600 font-semibold text-[9px] bg-green-50 px-1.5 py-0.5 rounded">Match</span>
+                                    </div>
+                                    <table className="w-full text-[10px]">
+                                      <thead>
+                                        <tr className="text-left text-[9px] text-gray-400 uppercase tracking-wider">
+                                          <th className="pb-1 font-semibold">Status</th>
+                                          <th className="pb-1 font-semibold text-right">Prod</th>
+                                          <th className="pb-1 font-semibold text-right">Dev</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="text-gray-700">
+                                        <tr className="border-t border-gray-100"><td className="py-1 font-mono">active</td><td className="py-1 text-right">31,402</td><td className="py-1 text-right">31,402</td></tr>
+                                        <tr className="border-t border-gray-100"><td className="py-1 font-mono">prospect</td><td className="py-1 text-right">12,118</td><td className="py-1 text-right">12,118</td></tr>
+                                        <tr className="border-t border-gray-100"><td className="py-1 font-mono">churned</td><td className="py-1 text-right">4,690</td><td className="py-1 text-right">4,690</td></tr>
+                                      </tbody>
+                                    </table>
+                                    <p className="text-[9px] text-gray-400 mt-1.5">No rows added or dropped. Only the source of <code className="bg-gray-100 px-1 rounded font-mono">customer_status</code> changed.</p>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-gray-600 leading-relaxed">
+                        The only changed field was <code className="bg-gray-100 px-1 rounded text-[9px] font-mono">customer_status</code>, which now matches Salesforce, so it is safe to ship.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        )
-      })}
-    </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
-/* --- Scope "Without" Simulator --- */
-function ScopeWithoutSimulator({ scenario, runId, onDone }) {
-  const [step, setStep] = useState(0)
-  const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
-
-  const debugSteps = [
-    { type: 'action', label: 'Reading fct_order_items.sql...' },
-    { type: 'action', label: 'SQL looks correct locally. No errors found.' },
-    { type: 'action', label: 'Attempting to compile... (no warehouse connection)' },
-    { type: 'detail', label: 'Cannot access production metadata or run results' },
-    {
-      type: 'takeaway',
-      text: 'The generic agent cannot see the failed job, cannot access run logs, and has no lineage context. Someone has to manually investigate the failure and paste error messages into the chat.',
-    },
-  ]
-
-  const refactorSteps = [
-    { type: 'action', label: 'Editing int_accounts.sql: swapping CASE for source column...' },
-    { type: 'action', label: 'SQL looks correct syntactically.' },
-    { type: 'action', label: 'Cannot run dbt compare (no production access).' },
-    { type: 'detail', label: 'No way to verify output matches production' },
-    { type: 'action', label: 'Suggesting: "You should test this manually."' },
-    { type: 'action', label: 'Cannot check downstream models (no lineage graph).' },
-    {
-      type: 'slack',
-      from: 'Maya (Finance)',
-      text: 'Hey, the customer_status numbers in our dashboard look different today. Did something change?',
-    },
-  ]
-
-  const steps = scenario === 'debug' ? debugSteps : refactorSteps
-
-  useEffect(() => {
-    setStep(0)
-    if (runId === 0) return
-    let i = 0
-    const iv = setInterval(() => {
-      i += 1
-      if (i >= steps.length) {
-        clearInterval(iv)
-        onDoneRef.current?.()
-        return
-      }
-      setStep(i)
-    }, STEP_DELAY)
-    setStep(0)
-    return () => clearInterval(iv)
-  }, [runId, scenario, steps.length])
-
-  if (runId === 0) {
-    return <div className="py-8 text-center text-xs text-gray-300">Press "Run simulation" to begin</div>
-  }
-
-  return (
-    <div className="border border-gray-200 rounded-xl p-4 bg-white space-y-2">
-      <SectionLabel>Generic agent</SectionLabel>
-      {steps.map((s, i) => {
-        const visible = i <= step
-        return (
-          <div key={`without-${scenario}-${i}`} style={stepStyle(visible)}>
-            {s.type === 'action' && (
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-                <span className="text-gray-400">{'>'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'detail' && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-medium">
-                <span>{'\u2717'}</span> {s.label}
-              </div>
-            )}
-            {s.type === 'slack' && (
-              <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 mt-1">
-                <p className="text-[9px] text-amber-500 font-semibold mb-1">Slack message</p>
-                <p className="text-[10px] text-gray-700">
-                  <span className="font-semibold">{s.from}:</span> {s.text}
-                </p>
-              </div>
-            )}
-            {s.type === 'takeaway' && (
-              <div className="border-t border-gray-100 pt-3 mt-2">
-                <p className="text-xs text-gray-600 leading-relaxed">{s.text}</p>
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-const SCOPE_SCENARIOS = [
-  { key: 'debug', label: 'Debug a failed job' },
-  { key: 'refactor', label: 'Refactor and compare' },
-]
-
-const SCOPE_PROMPTS = {
-  debug: '"Job #4821 failed overnight. What went wrong and can you fix it?"',
-  refactor: '"Refactor int_accounts to pull customer_status from the source instead of deriving it. Make sure nothing breaks."',
-}
-
-/* --- Scope Content --- */
-function ScopeContent({ mode, runId, onDone }) {
-  const [scenario, setScenario] = useState('debug')
-
-  // Reset scenario state on mode change
-  const prevModeRef = useRef(mode)
-  useEffect(() => {
-    if (prevModeRef.current !== mode) {
-      prevModeRef.current = mode
-    }
-  }, [mode])
-
-  return (
-    <div>
-      {/* Scenario toggle */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-[10px] text-gray-400 font-medium">Scenario:</span>
-        <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
-          {SCOPE_SCENARIOS.map((sc) => (
-            <button
-              key={sc.key}
-              onClick={() => setScenario(sc.key)}
-              className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all duration-200 ${
-                scenario === sc.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {sc.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Prompt */}
-      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4">
-        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Prompt</p>
-        <p className="text-xs text-gray-700 font-medium italic">{SCOPE_PROMPTS[scenario]}</p>
-      </div>
-
-      {/* Simulator */}
-      {mode === 'with' ? (
-        <ScopeSimulator scenario={scenario} runId={runId} onDone={onDone} />
-      ) : (
-        <ScopeWithoutSimulator scenario={scenario} runId={runId} onDone={onDone} />
-      )}
-    </div>
-  )
-}
-
-/* ===================================================
-   SECTION 3 -- Token efficiency
-   =================================================== */
+/* ═══════════════════════════════════════════════════
+   SECTION 3 — Token efficiency
+   ═══════════════════════════════════════════════════ */
 
 const GENERIC_STEPS = [
   { action: 'read', file: 'dbt_project.yml' },
@@ -619,16 +736,16 @@ const GENERIC_STEPS = [
   { action: 'read', file: 'models/stg_orders.sql' },
   { action: 'read', file: 'models/stg_customers.sql' },
   { action: 'read', file: 'models/stg_payments.sql' },
-  { action: 'grep', file: '"churn" across 47 files -- 0 results' },
+  { action: 'grep', file: '"churn" across 47 files — 0 results' },
   { action: 'read', file: 'models/stg_subscriptions.sql' },
   { action: 'read', file: 'models/stg_invoices.sql' },
   { action: 'read', file: 'models/int_enriched.sql' },
   { action: 'read', file: 'models/int_customer_orders.sql' },
-  { action: 'compile', file: 'int_customer_orders.sql -- checking refs...' },
+  { action: 'compile', file: 'int_customer_orders.sql — checking refs...' },
   { action: 'read', file: 'models/fct_orders.sql' },
   { action: 'read', file: 'models/fct_revenue.sql' },
   { action: 'read', file: 'models/fct_subscriptions.sql' },
-  { action: 'grep', file: '"segment" across 47 files -- 3 results' },
+  { action: 'grep', file: '"segment" across 47 files — 3 results' },
   { action: 'read', file: 'models/dim_products.sql' },
   { action: 'read', file: 'models/dim_customers.sql' },
   { action: 'read', file: 'models/dim_dates.sql' },
@@ -636,99 +753,86 @@ const GENERIC_STEPS = [
   { action: 'read', file: 'tests/schema.yml' },
   { action: 'read', file: 'tests/fct_orders_tests.yml' },
   { action: 'read', file: 'tests/int_enriched_tests.yml' },
-  { action: 'compile', file: 'fct_subscriptions.sql -- resolving columns...' },
+  { action: 'compile', file: 'fct_subscriptions.sql — resolving columns...' },
   { action: 'read', file: 'macros/utils.sql' },
   { action: 'read', file: 'macros/date_spine.sql' },
   { action: 'read', file: 'macros/churn_logic.sql' },
-  { action: 'compile', file: 'draft query -- syntax check...' },
-  { action: 'error', file: 'column "customer_segment" not found -- retrying' },
+  { action: 'compile', file: 'draft query — syntax check...' },
+  { action: 'error', file: 'column "customer_segment" not found — retrying' },
   { action: 'read', file: 'models/dim_customers.sql (re-read)' },
-  { action: 'grep', file: '"customer_segment" across 47 files -- 1 result' },
+  { action: 'grep', file: '"customer_segment" across 47 files — 1 result' },
   { action: 'read', file: 'snapshots/scd_customers.sql' },
   { action: 'read', file: 'models/dim_channels.sql' },
-  { action: 'compile', file: 'draft query v2 -- syntax check...' },
+  { action: 'compile', file: 'draft query v2 — syntax check...' },
   { action: 'read', file: 'packages.yml' },
   { action: 'read', file: 'models/marts/fct_churn.sql' },
-  { action: 'compile', file: 'final query -- validating...' },
+  { action: 'compile', file: 'final query — validating...' },
 ]
 
 const METADATA_RESULTS = [
   {
     label: 'Source models',
-    detail: 'stg_orders, stg_customers, stg_subscriptions, dim_regions',
-    role: 'Identifies every upstream model the new query needs to reference',
+    detail: 'dim_customers (customer_segment, region) + fct_orders (order activity)',
+    role: 'Build from the canonical marts, not staging copies',
   },
   {
     label: 'Grain',
-    detail: 'customer_id + month (calendar_spine)',
-    role: 'Sets the correct aggregation level so churn is computed per customer per month',
+    detail: 'dim_customers: 1 row / customer — fct_orders: 1 row / order',
+    role: 'Monthly rollup aggregates at the right level',
   },
   {
     label: 'Join path',
-    detail: 'stg_orders -> stg_customers -> dim_regions (via region_id)',
-    role: 'Determines the shortest valid join path so no extra tables are pulled in',
+    detail: 'fct_orders → dim_customers, many_to_one on customer_id',
+    role: 'Correct join — no fanout or double-counting',
   },
   {
     label: 'Freshness & tests',
-    detail: 'All sources fresh. 4 not_null, 2 unique, 1 accepted_values test defined',
-    role: 'Confirms data is current and existing test coverage before generating new SQL',
+    detail: 'Both inputs compiled <15 min ago, 4/4 tests passing',
+    role: 'Builds on current, validated data',
   },
 ]
 
+const TOKEN_PROMPT = '"Can you build a model with monthly churn rate by customer segment, broken down by region"'
+
 const METADATA_TABLES = [
-  { id: 'stg_orders', x: 20, y: 10 },
-  { id: 'stg_customers', x: 20, y: 55 },
-  { id: 'stg_subscriptions', x: 20, y: 100 },
-  { id: 'dim_regions', x: 180, y: 55 },
-  { id: 'fct_churn', x: 320, y: 55 },
+  { id: 'models',    label: 'models',    result: 'dim_customers, fct_orders',                 x: 340, y: 10 },
+  { id: 'columns',   label: 'columns',   result: 'customer_segment (STRING), region (STRING)', x: 340, y: 56 },
+  { id: 'lineage',   label: 'lineage',   result: 'fct_orders → dim_customers, many_to_one',   x: 340, y: 102 },
+  { id: 'tests',     label: 'tests',     result: '4/4 tests passing on inputs',                x: 340, y: 148 },
+  { id: 'freshness', label: 'freshness', result: 'compiled <15 min ago',                       x: 340, y: 194 },
 ]
 
 function MetadataGraph() {
-  const edges = [
-    ['stg_orders', 'fct_churn'],
-    ['stg_customers', 'dim_regions'],
-    ['stg_customers', 'fct_churn'],
-    ['stg_subscriptions', 'fct_churn'],
-    ['dim_regions', 'fct_churn'],
-  ]
-
-  const nodeW = 130
-  const nodeH = 22
-
-  function nodeCenter(id) {
-    const n = METADATA_TABLES.find((t) => t.id === id)
-    return { x: n.x + nodeW / 2, y: n.y + nodeH / 2 }
-  }
-
   return (
-    <svg viewBox="0 0 470 130" className="w-full" style={{ maxHeight: 100 }}>
-      {edges.map(([from, to]) => {
-        const a = nodeCenter(from)
-        const b = nodeCenter(to)
-        const mx = (a.x + b.x) / 2
-        return (
-          <path
-            key={`${from}-${to}`}
-            d={`M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`}
-            stroke="#d1d5db"
-            strokeWidth="1.2"
-            fill="none"
-          />
-        )
-      })}
-      {METADATA_TABLES.map((n) => (
-        <g key={n.id}>
-          <rect x={n.x} y={n.y} width={nodeW} height={nodeH} rx="4" fill="#f9fafb" stroke="#d1d5db" strokeWidth="1" />
-          <text x={n.x + nodeW / 2} y={n.y + nodeH / 2 + 4} textAnchor="middle" fontSize="9" fill="#374151" fontFamily="monospace">
-            {n.id}
-          </text>
-        </g>
-      ))}
-    </svg>
+    <div>
+      <p className="text-[10px] text-gray-500 mb-3">One query, resolved across the project's metadata tables — no file-by-file reconstruction.</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-x-auto">
+        <svg width="680" height="240" viewBox="0 0 680 240" className="w-full h-auto">
+          <motion.g initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+            <rect x={10} y={80} width={180} height={80} rx={10} fill="#f0fdf4" stroke="#86efac" strokeWidth={1.5} />
+            <text x={100} y={105} textAnchor="middle" fontSize={9} fontWeight={700} fill="#059669" fontFamily="ui-monospace, monospace">single metadata query</text>
+            <text x={100} y={123} textAnchor="middle" fontSize={8} fill="#6b7280" fontFamily="ui-monospace, monospace">"monthly churn by</text>
+            <text x={100} y={135} textAnchor="middle" fontSize={8} fill="#6b7280" fontFamily="ui-monospace, monospace">segment, by region"</text>
+          </motion.g>
+          {METADATA_TABLES.map((table, i) => {
+            const fromY = 120
+            const toY = table.y + 18
+            return (
+              <motion.g key={table.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }}>
+                <path d={`M 190 ${fromY} C 265 ${fromY}, 265 ${toY}, ${table.x} ${toY}`} fill="none" stroke="#d1d5db" strokeWidth={1.2} strokeDasharray="3,3" />
+                <circle cx={table.x} cy={toY} r={2.5} fill="#86efac" />
+                <rect x={table.x} y={table.y} width={320} height={36} rx={6} fill="white" stroke="#e5e7eb" strokeWidth={1} />
+                <text x={table.x + 8} y={table.y + 14} fontSize={9} fontWeight={700} fill="#059669" fontFamily="ui-monospace, monospace">{table.label}</text>
+                <text x={table.x + 8} y={table.y + 27} fontSize={8} fill="#6b7280" fontFamily="ui-monospace, monospace">{table.result}</text>
+              </motion.g>
+            )
+          })}
+        </svg>
+      </div>
+      <p className="text-[9px] text-gray-400 mt-2 italic">This is a slice of a larger set of tables the native metadata engine maintains — only the tables relevant to this prompt are queried.</p>
+    </div>
   )
 }
-
-const TOKEN_PROMPT = '"Can you build a model with monthly churn rate by customer segment, broken down by region"'
 
 function TokenUsage({ mode, runId, onDone }) {
   const prefersReduced = useReducedMotion()
@@ -745,9 +849,9 @@ function TokenUsage({ mode, runId, onDone }) {
     timeoutsRef.current.forEach(clearTimeout)
     timeoutsRef.current = []
     setVisibleFiles(0)
-    setShowResult(false)
     setShowExplainer(false)
     setPulseExplainer(false)
+    setShowResult(false)
 
     if (runId === 0) return
 
@@ -777,9 +881,6 @@ function TokenUsage({ mode, runId, onDone }) {
         onDoneRef.current?.()
       }, lookupDelay * (METADATA_RESULTS.length + 1) + 400)
       timeoutsRef.current.push(resultT)
-      // Stop pulse after a few seconds
-      const pulseT = setTimeout(() => setPulseExplainer(false), lookupDelay * (METADATA_RESULTS.length + 1) + 3400)
-      timeoutsRef.current.push(pulseT)
     }
 
     return () => timeoutsRef.current.forEach(clearTimeout)
@@ -829,12 +930,12 @@ function TokenUsage({ mode, runId, onDone }) {
               })
             ) : (
               METADATA_RESULTS.slice(0, visibleFiles).map((item) => (
-                <div key={item.label} className="flex items-start gap-1.5 text-[10px] py-1">
-                  <span className="text-green-500 text-xs font-bold mt-0.5 shrink-0">{'\u2713'}</span>
-                  <div>
-                    <span className="text-gray-700 font-medium">{item.label}</span>
-                    <span className="text-gray-400 ml-1.5">{item.detail}</span>
-                    <p className="text-[9px] text-gray-400 italic">{item.role}</p>
+                <div key={item.label} className="flex items-start gap-2 text-[10px] py-1.5">
+                  <span className="text-green-500 text-xs font-bold mt-0.5 shrink-0">&#10003;</span>
+                  <div className="min-w-0">
+                    <span className="text-gray-800 font-semibold">{item.label}</span>
+                    <span className="text-gray-500 ml-1.5">{item.detail}</span>
+                    <p className="text-gray-400 text-[9px] mt-0.5">{item.role}</p>
                   </div>
                 </div>
               ))
@@ -866,50 +967,43 @@ function TokenUsage({ mode, runId, onDone }) {
                   <p className="text-[10px] text-red-700 font-semibold">~48k tokens to get context</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <>
                   <div className="border border-green-200 bg-green-50/50 rounded-lg px-3 py-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-green-800 font-semibold">~3.2k tokens -- 93% fewer</p>
+                        <p className="text-[10px] text-green-800 font-semibold">~3.2k tokens — 93% fewer</p>
                       </div>
                       <p className="text-[10px] font-semibold text-green-700">Cheaper and more accurate</p>
                     </div>
                   </div>
-
-                  {/* See how this works button */}
+                  <style>{`@keyframes explainer-pulse { 0%, 100% { background-color: transparent; } 50% { background-color: rgb(220 252 231); } }`}</style>
                   <button
-                    onClick={() => setShowExplainer((v) => !v)}
-                    className={`text-[10px] font-medium px-3 py-1.5 rounded-lg border transition-all duration-200 ${
-                      showExplainer
-                        ? 'bg-green-50 border-green-200 text-green-700'
-                        : pulseExplainer
-                          ? 'bg-green-50 border-green-300 text-green-700 animate-pulse'
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                    }`}
+                    onClick={() => { setShowExplainer(e => !e); setPulseExplainer(false) }}
+                    className={`mt-3 text-[10px] font-medium text-green-700 hover:text-green-900 transition-colors cursor-pointer flex items-center gap-1 px-2 py-1 -mx-2 rounded-md ${pulseExplainer && !showExplainer ? 'ring-2 ring-green-400' : ''}`}
+                    style={pulseExplainer && !showExplainer && !prefersReduced ? { animation: 'explainer-pulse 1.5s ease-in-out 3' } : undefined}
+                    onAnimationEnd={() => setPulseExplainer(false)}
                   >
                     {showExplainer ? 'Hide details' : 'See how this works'}
+                    <motion.svg width="10" height="10" viewBox="0 0 10 10" animate={{ rotate: showExplainer ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0">
+                      <path d="M2.5 3.75L5 6.25L7.5 3.75" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </motion.svg>
                   </button>
-
-                  {showExplainer && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="border border-gray-200 rounded-lg p-3 space-y-3">
-                        <div>
-                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Metadata graph (relevant subset)</p>
+                  <AnimatePresence>
+                    {showExplainer && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.35 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-3">
                           <MetadataGraph />
                         </div>
-                        <p className="text-[10px] text-gray-600 leading-relaxed">
-                          Instead of reading every file, dbt Wizard queries the project metadata graph for the models, grain, join paths, and test coverage relevant to the prompt. The metadata engine returns structured results, not raw file contents, so the context window stays small and precise.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
             </motion.div>
           )}
@@ -929,11 +1023,43 @@ function TokenContent({ mode, runId, onDone }) {
   )
 }
 
-/* ===================================================
-   SECTION 4 -- Visual outputs
-   =================================================== */
+/* ═══════════════════════════════════════════════════
+   SECTION 4 — Visual outputs
+   ═══════════════════════════════════════════════════ */
 
-const VISUAL_PROMPT = '"Create a model called fct_customer_orders that shows total spend and order count per customer for completed orders. Add a lifetime_value column as total spend times 1.2."'
+const chatMessages = [
+  { role: 'user', text: 'I need a model that shows total spend and order count per customer, but only for completed orders. Call it fct_customer_orders.' },
+  { role: 'assistant', text: 'I\'ll create fct_customer_orders using stg_orders and stg_customers. I\'ll join on customer_id, filter to completed orders, and aggregate spend and count per customer.' },
+  { role: 'user', text: 'Also add a lifetime_value column — total spend times 1.2.' },
+  { role: 'assistant', text: 'Done. I\'ve added lifetime_value as sum(amount) * 1.2. Here\'s the generated model.' },
+]
+
+function ChatPane() {
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+      className="bg-white border border-gray-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col cursor-default hover:shadow-md transition-shadow"
+    >
+      <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+        <span className="text-xs text-gray-400">Chat</span>
+      </div>
+      <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+        {chatMessages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
+              msg.role === 'user'
+                ? 'bg-gray-900 text-white rounded-br-sm'
+                : 'bg-gray-100 text-gray-700 rounded-bl-sm'
+            }`}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
 
 function OutputSqlPane() {
   const KW = 'text-blue-600'
@@ -945,7 +1071,7 @@ function OutputSqlPane() {
   return (
     <div className="p-4 font-mono text-xs leading-relaxed">
       <div><span className={CMT}>-- fct_customer_orders.sql</span></div>
-      <div><span className={JJ}>{'{{ '}</span><span className={FN}>config</span>(<span className={FN}>materialized</span>=<span className={STR}>&apos;table&apos;</span>)<span className={JJ}>{' }}'}</span></div>
+      <div><span className={JJ}>{'{{ '}</span><span className={FN}>config</span>(<span className={FN}>materialized</span>=<span className={STR}>'table'</span>)<span className={JJ}>{' }}'}</span></div>
       <div className="h-2" />
       <div><span className={KW}>select</span></div>
       <div><span className={TXT}>    o.customer_id,</span></div>
@@ -953,147 +1079,88 @@ function OutputSqlPane() {
       <div><span className={KW}>    count</span><span className={TXT}>(o.order_id) </span><span className={KW}>as</span><span className={TXT}> order_count,</span></div>
       <div><span className={KW}>    sum</span><span className={TXT}>(o.amount) * </span><span className={STR}>1.2</span><span className={TXT}> </span><span className={KW}>as</span><span className={TXT}> lifetime_value</span></div>
       <div className="h-2" />
-      <div><span className={KW}>from</span> <span className={JJ}>{'{{ '}</span><span className={FN}>ref</span>(<span className={STR}>&apos;stg_orders&apos;</span>)<span className={JJ}>{' }}'}</span><span className={TXT}> o</span></div>
-      <div><span className={KW}>left join</span> <span className={JJ}>{'{{ '}</span><span className={FN}>ref</span>(<span className={STR}>&apos;stg_customers&apos;</span>)<span className={JJ}>{' }}'}</span><span className={TXT}> c</span></div>
+      <div><span className={KW}>from</span> <span className={JJ}>{'{{ '}</span><span className={FN}>ref</span>(<span className={STR}>'stg_orders'</span>)<span className={JJ}>{' }}'}</span><span className={TXT}> o</span></div>
+      <div><span className={KW}>left join</span> <span className={JJ}>{'{{ '}</span><span className={FN}>ref</span>(<span className={STR}>'stg_customers'</span>)<span className={JJ}>{' }}'}</span><span className={TXT}> c</span></div>
       <div><span className={TXT}>    </span><span className={KW}>on</span><span className={TXT}> o.customer_id = c.customer_id</span></div>
       <div className="h-2" />
-      <div><span className={KW}>where</span><span className={TXT}> o.status = </span><span className={STR}>&apos;completed&apos;</span></div>
+      <div><span className={KW}>where</span><span className={TXT}> o.status = </span><span className={STR}>'completed'</span></div>
       <div className="h-2" />
       <div><span className={KW}>group by</span><span className={TXT}> o.customer_id</span></div>
     </div>
   )
 }
 
-/* --- Visual Simulator --- */
-function VisualSimulator({ mode, runId, onDone }) {
-  const [step, setStep] = useState(0)
-  const [outputView, setOutputView] = useState('sql')
+function VisualOutputsContent({ mode }) {
+  const [outputView, setOutputView] = useState(mode === 'with' ? 'canvas' : 'sql')
   const [pulseToggle, setPulseToggle] = useState(false)
-  const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
-
-  const steps = [
-    { type: 'action', label: mode === 'with' ? 'Generating fct_customer_orders with project context...' : 'Generating fct_customer_orders from prompt...' },
-    { type: 'output', label: 'Output ready' },
-    {
-      type: 'takeaway',
-      text: mode === 'with'
-        ? 'dbt Wizard generates the SQL and also lets you view the same model as a Canvas, so non-SQL users can read and understand the logic.'
-        : 'A generic agent outputs SQL, but there is no visual representation. Team members who do not read SQL cannot verify the logic.',
-    },
-  ]
 
   useEffect(() => {
-    setStep(0)
-    setOutputView('sql')
-    setPulseToggle(false)
-    if (runId === 0) return
-    let i = 0
-    const iv = setInterval(() => {
-      i += 1
-      if (i >= steps.length) {
-        clearInterval(iv)
-        if (mode === 'with') {
-          setPulseToggle(true)
-          setTimeout(() => setPulseToggle(false), 3000)
-        }
-        onDoneRef.current?.()
-        return
-      }
-      setStep(i)
-    }, STEP_DELAY)
-    setStep(0)
-    return () => clearInterval(iv)
-  }, [runId, mode, steps.length])
-
-  if (runId === 0) {
-    return <div className="py-8 text-center text-xs text-gray-300">Press "Run simulation" to begin</div>
-  }
+    setOutputView(mode === 'with' ? 'canvas' : 'sql')
+    setPulseToggle(mode === 'with')
+  }, [mode])
 
   return (
-    <div className="space-y-2">
-      {/* Step 0: action */}
-      <div style={stepStyle(step >= 0)}>
-        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-          <span className="text-blue-500">{'>'}</span> {steps[0].label}
-        </div>
-      </div>
-
-      {/* Step 1: output panel */}
-      <div style={stepStyle(step >= 1)}>
-        <div className="bg-white border border-gray-200/60 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">Output</span>
-              <span className="text-xs font-mono font-semibold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">fct_customer_orders.sql</span>
-            </div>
-            {mode === 'with' && (
-              <div className={`inline-flex bg-gray-100 rounded-lg p-0.5 ${pulseToggle ? 'ring-2 ring-green-400 ring-opacity-60 animate-pulse' : ''}`}>
-                <button
-                  onClick={() => setOutputView('sql')}
-                  className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all duration-200 ${
-                    outputView === 'sql' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  SQL
-                </button>
-                <button
-                  onClick={() => { setOutputView('canvas'); setPulseToggle(false) }}
-                  className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all duration-200 ${
-                    outputView === 'canvas' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Canvas
-                </button>
-              </div>
-            )}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChatPane />
+      <motion.div
+        whileHover={{ y: -3 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        className="bg-white border border-gray-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col cursor-default hover:shadow-md transition-shadow"
+      >
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">Output</span>
+            <span className="text-xs font-mono font-semibold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">fct_customer_orders.sql</span>
           </div>
-          <AnimatePresence mode="wait">
-            {(mode === 'without' || outputView === 'sql') ? (
-              <motion.div key="sql-out" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <OutputSqlPane />
-              </motion.div>
-            ) : (
-              <motion.div key="canvas-out" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="p-4">
-                <CanvasSection />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {mode === 'with' && (
+            <div className={`inline-flex bg-gray-100 rounded-lg p-0.5 transition-all duration-300 ${pulseToggle ? 'ring-2 ring-green-400' : ''}`}
+              style={pulseToggle ? { animation: 'explainer-pulse 1.5s ease-in-out 3' } : undefined}
+              onAnimationEnd={() => setPulseToggle(false)}>
+              <style>{`@keyframes explainer-pulse { 0%, 100% { background-color: transparent; } 50% { background-color: rgb(220 252 231); } }`}</style>
+              <button
+                onClick={() => { setOutputView('sql'); setPulseToggle(false) }}
+                className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all duration-200 ${
+                  outputView === 'sql' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                SQL
+              </button>
+              <button
+                onClick={() => { setOutputView('canvas'); setPulseToggle(false) }}
+                className={`px-3 py-1 rounded-md text-[10px] font-medium transition-all duration-200 ${
+                  outputView === 'canvas' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Canvas
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Step 2: takeaway */}
-      <div style={stepStyle(step >= 2)}>
-        <div className="border-t border-gray-100 pt-3 mt-2">
-          <p className="text-xs text-gray-600 leading-relaxed">{steps[2].text}</p>
-        </div>
-      </div>
+        <AnimatePresence mode="wait">
+          {(mode === 'without' || outputView === 'sql') ? (
+            <motion.div key="sql-out" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <OutputSqlPane />
+            </motion.div>
+          ) : (
+            <motion.div key="canvas-out" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="p-4">
+              <CanvasSection />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   )
 }
 
-/* --- Visual Outputs Content --- */
-function VisualOutputsContent({ mode, runId, onDone }) {
-  return (
-    <div>
-      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-4">
-        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Prompt</p>
-        <p className="text-xs text-gray-700 font-medium italic">{VISUAL_PROMPT}</p>
-      </div>
-      <VisualSimulator mode={mode} runId={runId} onDone={onDone} />
-    </div>
-  )
-}
-
-/* ===================================================
+/* ═══════════════════════════════════════════════════
    Main export
-   =================================================== */
+   ═══════════════════════════════════════════════════ */
 export default function WizardSection() {
   const [activeTopic, setActiveTopic] = useState('intelligence')
   const [mode, setMode] = useState('without')
   const [playing, setPlaying] = useState(false)
   const [hasPlayed, setHasPlayed] = useState(false)
-  const [runId, setRunId] = useState(0)
+  const [tokenRunId, setTokenRunId] = useState(0)
 
   // Reset playing state when tab or mode changes
   const handleTopicChange = (key) => {
@@ -1101,21 +1168,23 @@ export default function WizardSection() {
     setMode('without')
     setPlaying(false)
     setHasPlayed(false)
-    setRunId(0)
+    setTokenRunId(0)
   }
   const handleModeChange = (m) => {
     setMode(m)
     setPlaying(false)
     setHasPlayed(false)
-    setRunId(0)
+    setTokenRunId(0)
   }
   const handlePlay = () => {
-    setRunId((r) => r + 1)
-    setPlaying(true)
-    setHasPlayed(true)
-  }
-  const handleDone = () => {
-    setPlaying(false)
+    if (activeTopic === 'tokens') {
+      setTokenRunId(r => r + 1)
+      setPlaying(true)
+      setHasPlayed(true)
+    } else {
+      setPlaying(true)
+      setHasPlayed(true)
+    }
   }
 
   return (
@@ -1123,7 +1192,7 @@ export default function WizardSection() {
       {/* Topic tabs + toggle + play button */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="inline-flex bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Wizard comparison topics">
-          {topics.map((t) => (
+          {topics.map(t => (
             <button
               key={t.key}
               role="tab"
@@ -1142,7 +1211,9 @@ export default function WizardSection() {
         </div>
         <div className="flex items-center gap-3">
           <Toggle value={mode} onChange={handleModeChange} />
-          <PlayButton playing={playing} hasPlayed={hasPlayed} onPlay={handlePlay} />
+          {activeTopic === 'tokens' && (
+            <PlayButton playing={playing} hasPlayed={hasPlayed} onPlay={handlePlay} />
+          )}
         </div>
       </div>
 
@@ -1164,22 +1235,22 @@ export default function WizardSection() {
       <AnimatePresence mode="wait">
         {activeTopic === 'intelligence' && (
           <motion.div key="intelligence" id="panel-intelligence" role="tabpanel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-            <IntelligenceContent mode={mode} runId={runId} onDone={handleDone} />
+            <IntelligenceContent mode={mode} />
           </motion.div>
         )}
         {activeTopic === 'scope' && (
           <motion.div key="scope" id="panel-scope" role="tabpanel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-            <ScopeContent mode={mode} runId={runId} onDone={handleDone} />
+            <ScopeContent mode={mode} />
           </motion.div>
         )}
         {activeTopic === 'tokens' && (
           <motion.div key="tokens" id="panel-tokens" role="tabpanel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-            <TokenContent mode={mode} runId={runId} onDone={handleDone} />
+            <TokenContent mode={mode} runId={tokenRunId} onDone={() => setPlaying(false)} />
           </motion.div>
         )}
         {activeTopic === 'visual' && (
           <motion.div key="visual" id="panel-visual" role="tabpanel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-            <VisualOutputsContent mode={mode} runId={runId} onDone={handleDone} />
+            <VisualOutputsContent mode={mode} />
           </motion.div>
         )}
       </AnimatePresence>
