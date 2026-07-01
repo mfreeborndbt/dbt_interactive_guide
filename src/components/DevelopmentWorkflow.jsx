@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 /* ─── Step content components ─────────────────────────────── */
 
@@ -996,76 +996,856 @@ function DeferralDiagram() {
   )
 }
 
-function QAStep2() {
-  const ALL  = [0,1,2,3,4,5,6]
-  const SLIM = [5,6]
+/* ── Deferral animation data (ported from DeferralAnimation.jsx) ─── */
+const defNodes = [
+  { id: 'raw_customers', label: 'raw_customers', type: 'source', x: 40, y: 40 },
+  { id: 'raw_geoinfo', label: 'raw_geoinfo', type: 'source', x: 40, y: 140 },
+  { id: 'raw_orders', label: 'raw_orders', type: 'source', x: 40, y: 260 },
+  { id: 'raw_product', label: 'raw_product', type: 'source', x: 40, y: 360 },
+  { id: 'stg_customers', label: 'stg_customers', type: 'staging', x: 260, y: 40 },
+  { id: 'stg_geoinfo', label: 'stg_geoinfo', type: 'staging', x: 260, y: 140 },
+  { id: 'stg_orders', label: 'stg_orders', type: 'staging', x: 260, y: 260 },
+  { id: 'stg_product', label: 'stg_product', type: 'staging', x: 260, y: 360 },
+  { id: 'int_enriched_customer', label: 'int_enriched_customer', type: 'intermediate', x: 520, y: 80 },
+  { id: 'int_enriched_orders', label: 'int_enriched_orders', type: 'intermediate', x: 520, y: 300 },
+  { id: 'fct_orders', label: 'fct_orders_with_customers_details', type: 'mart', x: 790, y: 190 },
+]
+
+const defEdges = [
+  { from: 'raw_customers', to: 'stg_customers' },
+  { from: 'raw_geoinfo', to: 'stg_geoinfo' },
+  { from: 'raw_orders', to: 'stg_orders' },
+  { from: 'raw_product', to: 'stg_product' },
+  { from: 'stg_customers', to: 'int_enriched_customer' },
+  { from: 'stg_geoinfo', to: 'int_enriched_customer' },
+  { from: 'stg_orders', to: 'int_enriched_orders' },
+  { from: 'stg_product', to: 'int_enriched_orders' },
+  { from: 'int_enriched_customer', to: 'fct_orders' },
+  { from: 'int_enriched_orders', to: 'fct_orders' },
+]
+
+const DEF_MART_ID = 'fct_orders'
+const DEF_UPSTREAM_IDS = defNodes.filter(n => n.id !== DEF_MART_ID).map(n => n.id)
+const DEF_SOURCE_IDS = ['raw_customers', 'raw_geoinfo', 'raw_orders', 'raw_product']
+
+const defBuildSteps = [
+  { ids: ['stg_customers', 'stg_geoinfo', 'stg_orders', 'stg_product'], label: 'Staging' },
+  { ids: ['int_enriched_customer', 'int_enriched_orders'], label: 'Intermediate' },
+  { ids: [DEF_MART_ID], label: 'Mart' },
+]
+
+const DEF_W = 180
+const DEF_H = 36
+
+const defIdleC = { bg: '#f3f4f6', border: '#d1d5db', text: '#6b7280' }
+const defBuildingC = { bg: '#93c5fd', border: '#3b82f6', text: '#1e3a5f' }
+const defTestingC = { bg: '#c4b5fd', border: '#7c3aed', text: '#4c1d95' }
+const defCompletedC = { bg: '#86efac', border: '#22c55e', text: '#166534' }
+const defDeferredC = { bg: '#e5e7eb', border: '#9ca3af', text: '#9ca3af' }
+const defSourceC = { bg: '#dcfce7', border: '#86efac', text: '#166534' }
+const defModifiedIdleC = { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' }
+
+function defEdgePath(fromNode, toNode) {
+  const from = { x: fromNode.x + DEF_W, y: fromNode.y + DEF_H / 2 }
+  const to = { x: toNode.x, y: toNode.y + DEF_H / 2 }
+  const midX = (from.x + to.x) / 2
+  return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`
+}
+
+/* ── Slim CI / state:modified animation data (ported from StateModifiedAnimation.jsx) ─── */
+const smNodes = [
+  { id: 'raw_customers', label: 'raw_customers', type: 'source', x: 40, y: 40 },
+  { id: 'raw_geoinfo', label: 'raw_geoinfo', type: 'source', x: 40, y: 140 },
+  { id: 'raw_orders', label: 'raw_orders', type: 'source', x: 40, y: 260 },
+  { id: 'stg_customers', label: 'stg_customers', type: 'staging', x: 260, y: 40 },
+  { id: 'stg_geoinfo', label: 'stg_geoinfo', type: 'staging', x: 260, y: 140 },
+  { id: 'stg_orders', label: 'stg_orders', type: 'staging', x: 260, y: 260 },
+  { id: 'int_enriched_customer', label: 'int_enriched_customer', type: 'intermediate', x: 520, y: 80 },
+  { id: 'int_enriched_orders', label: 'int_enriched_orders', type: 'intermediate', x: 520, y: 260 },
+  { id: 'fct_orders', label: 'fct_orders_with_customers_details', type: 'mart', x: 790, y: 170 },
+]
+
+const smEdges = [
+  { from: 'raw_customers', to: 'stg_customers' },
+  { from: 'raw_geoinfo', to: 'stg_geoinfo' },
+  { from: 'raw_orders', to: 'stg_orders' },
+  { from: 'stg_customers', to: 'int_enriched_customer' },
+  { from: 'stg_geoinfo', to: 'int_enriched_customer' },
+  { from: 'stg_orders', to: 'int_enriched_orders' },
+  { from: 'int_enriched_customer', to: 'fct_orders' },
+  { from: 'int_enriched_orders', to: 'fct_orders' },
+]
+
+const SM_MODIFIED_ID = 'int_enriched_orders'
+const SM_DOWNSTREAM_ID = 'fct_orders'
+const SM_SOURCE_IDS = ['raw_customers', 'raw_geoinfo', 'raw_orders']
+const SM_SKIPPED_IDS = ['stg_customers', 'stg_geoinfo', 'int_enriched_customer', 'stg_orders']
+
+const smWithoutSteps = [
+  { ids: ['stg_customers', 'stg_geoinfo', 'stg_orders'], label: 'Staging' },
+  { ids: ['int_enriched_customer', 'int_enriched_orders'], label: 'Intermediate' },
+  { ids: ['fct_orders'], label: 'Mart' },
+]
+
+const SM_W = 180
+const SM_H = 36
+
+const smIdleC = { bg: '#f3f4f6', border: '#d1d5db', text: '#6b7280' }
+const smBuildingC = { bg: '#93c5fd', border: '#3b82f6', text: '#1e3a5f' }
+const smTestingC = { bg: '#c4b5fd', border: '#7c3aed', text: '#4c1d95' }
+const smCompletedC = { bg: '#86efac', border: '#22c55e', text: '#166534' }
+const smSkippedC = { bg: '#e5e7eb', border: '#9ca3af', text: '#9ca3af' }
+const smSourceC = { bg: '#dcfce7', border: '#86efac', text: '#166534' }
+const smModifiedIdleC = { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' }
+
+function smEdgePath(fromNode, toNode) {
+  const from = { x: fromNode.x + SM_W, y: fromNode.y + SM_H / 2 }
+  const to = { x: toNode.x, y: toNode.y + SM_H / 2 }
+  const midX = (from.x + to.x) / 2
+  return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`
+}
+
+function smEdgeStroke(state) {
+  if (state === 'building') return '#3b82f6'
+  if (state === 'testing') return '#7c3aed'
+  if (state === 'completed') return '#22c55e'
+  if (state === 'skipped') return '#9ca3af'
+  return '#d1d5db'
+}
+
+/* ── DeferralSim (ported from DeferralAnimation.jsx, terminal removed) ─── */
+function DeferralSim() {
+  const [mode, setMode] = useState('without')
+  const [nodePhases, setNodePhases] = useState({})
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasRun, setHasRun] = useState(false)
+  const [deferredActive, setDeferredActive] = useState(false)
+  const timeoutsRef = useRef([])
+
+  const reset = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setNodePhases({})
+    setIsRunning(false)
+    setHasRun(false)
+    setDeferredActive(false)
+  }, [])
+
+  const switchMode = (m) => {
+    reset()
+    setMode(m)
+  }
+
+  const addDefTimeout = (fn, ms) => {
+    const id = setTimeout(fn, ms)
+    timeoutsRef.current.push(id)
+    return id
+  }
+
+  const setDefPhase = (ids, phase) => setNodePhases(prev => {
+    const next = { ...prev }
+    ids.forEach(id => { next[id] = phase })
+    return next
+  })
+
+  const runAnimation = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setIsRunning(true)
+    setHasRun(true)
+    setNodePhases({})
+    setDeferredActive(false)
+
+    // Pre-build: highlight target with modified state
+    addDefTimeout(() => {
+      setDefPhase([DEF_MART_ID], 'modified')
+      setDefPhase(DEF_SOURCE_IDS, 'source')
+    }, 300)
+
+    // Defer upstream at t=1800
+    addDefTimeout(() => {
+      setDeferredActive(true)
+      setDefPhase(
+        DEF_UPSTREAM_IDS.filter(id => !DEF_SOURCE_IDS.includes(id)),
+        'deferred'
+      )
+    }, 1800)
+
+    // Build only the target: building -> testing -> completed
+    addDefTimeout(() => { setDefPhase([DEF_MART_ID], 'building') }, 3000)
+    addDefTimeout(() => { setDefPhase([DEF_MART_ID], 'testing') }, 4200)
+    addDefTimeout(() => { setDefPhase([DEF_MART_ID], 'completed') }, 5200)
+    addDefTimeout(() => { setIsRunning(false) }, 5800)
+  }, [])
+
+  const schema = mode === 'with' ? 'prod' : 'qa'
+
+  function getColors(nodeId) {
+    const phase = nodePhases[nodeId]
+    if (DEF_SOURCE_IDS.includes(nodeId) && phase !== 'deferred') return defSourceC
+    if (phase === 'deferred') return defDeferredC
+    if (phase === 'building') return defBuildingC
+    if (phase === 'testing') return defTestingC
+    if (phase === 'completed') return defCompletedC
+    if (phase === 'modified') return defModifiedIdleC
+    if (DEF_SOURCE_IDS.includes(nodeId)) return defSourceC
+    return defIdleC
+  }
+
+  function defEdgeStroke(state) {
+    if (state === 'building') return '#3b82f6'
+    if (state === 'testing') return '#7c3aed'
+    if (state === 'completed') return '#22c55e'
+    if (state === 'deferred') return '#9ca3af'
+    return '#d1d5db'
+  }
+
+  function getEdgeState(edge) {
+    const fp = nodePhases[edge.from]
+    const tp = nodePhases[edge.to]
+    if (fp === 'deferred' || tp === 'deferred') return 'deferred'
+    if (tp === 'building') return 'building'
+    if (tp === 'testing') return 'testing'
+    if (fp === 'completed' && (tp === 'completed' || tp === 'building' || tp === 'testing')) return 'completed'
+    return 'idle'
+  }
 
   return (
-    <div className="w-full space-y-6">
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="inline-flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => switchMode('without')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === 'without' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Without deferral
+            </button>
+            <button
+              onClick={() => switchMode('with')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === 'with' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              With deferral
+            </button>
+          </div>
+        </div>
+        <button
+          onClick={runAnimation}
+          disabled={isRunning}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all duration-150 ${
+            isRunning
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}
+        >
+          {isRunning ? 'Running...' : hasRun ? 'Run again' : 'Run simulation'}
+        </button>
+      </div>
+
+      {/* DAG */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 overflow-x-auto">
+        <svg width="1060" height="430" viewBox="0 0 1060 430" className="w-full h-auto">
+          {/* Edges */}
+          {defEdges.map((edge) => {
+            const fromNode = defNodes.find(n => n.id === edge.from)
+            const toNode = defNodes.find(n => n.id === edge.to)
+            const path = defEdgePath(fromNode, toNode)
+            const state = getEdgeState(edge)
+            return (
+              <motion.path
+                key={`${edge.from}-${edge.to}`}
+                d={path}
+                fill="none"
+                strokeLinecap="round"
+                animate={{ stroke: defEdgeStroke(state), strokeWidth: state === 'building' || state === 'testing' ? 2.5 : 2 }}
+                strokeDasharray={state === 'deferred' ? '6 4' : 'none'}
+                transition={{ duration: 0.4 }}
+              />
+            )
+          })}
+
+          {/* Edge arrows */}
+          {defEdges.map((edge) => {
+            const toNode = defNodes.find(n => n.id === edge.to)
+            const state = getEdgeState(edge)
+            return (
+              <motion.circle
+                key={`arrow-${edge.from}-${edge.to}`}
+                cx={toNode.x - 4}
+                cy={toNode.y + DEF_H / 2}
+                r={3}
+                animate={{ fill: defEdgeStroke(state) }}
+                transition={{ duration: 0.4 }}
+              />
+            )
+          })}
+
+          {/* "from prod/qa" annotation on edges feeding the mart when deferred */}
+          {deferredActive && (
+            <text x={735} y={175} fontSize={9} fill="#6b7280" fontWeight={600} fontStyle="italic" textAnchor="middle">
+              inputs read from {schema}
+            </text>
+          )}
+
+          {/* Nodes */}
+          {defNodes.map((node) => {
+            const phase = nodePhases[node.id]
+            const colors = getColors(node.id)
+            const isTarget = node.id === DEF_MART_ID
+
+            return (
+              <motion.g key={node.id}>
+                {/* Target marker (dashed orange border) */}
+                {isTarget && (
+                  <motion.rect
+                    x={node.x - 3}
+                    y={node.y - 3}
+                    width={DEF_W + 6}
+                    height={DEF_H + 6}
+                    rx={10}
+                    fill="none"
+                    stroke="#F97316"
+                    strokeWidth={phase === 'modified' ? 3 : 2}
+                    strokeDasharray="4 3"
+                    animate={{ opacity: phase === 'modified' ? [0.4, 1, 0.4] : 0.5 }}
+                    transition={phase === 'modified' ? { duration: 0.8, repeat: Infinity } : { duration: 0.3 }}
+                  />
+                )}
+
+                {/* Modified marker (non-target nodes that are modified) */}
+                {!isTarget && phase === 'modified' && (
+                  <rect
+                    x={node.x - 3} y={node.y - 3}
+                    width={DEF_W + 6} height={DEF_H + 6}
+                    rx={10} fill="none" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 3" opacity={0.6}
+                  />
+                )}
+
+                {/* Node rect */}
+                <motion.rect
+                  x={node.x}
+                  y={node.y}
+                  width={DEF_W}
+                  height={DEF_H}
+                  rx={8}
+                  animate={{ fill: colors.bg, stroke: colors.border }}
+                  strokeWidth={phase === 'building' || phase === 'testing' ? 2.5 : 1.5}
+                  transition={{ duration: 0.4 }}
+                />
+
+                {/* Active pulse (building or testing) */}
+                {(phase === 'building' || phase === 'testing') && (
+                  <motion.rect
+                    x={node.x} y={node.y} width={DEF_W} height={DEF_H} rx={8}
+                    fill="none" stroke={colors.border} strokeWidth={1}
+                    initial={{ opacity: 0.6 }}
+                    animate={{ opacity: [0.6, 0, 0.6] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                )}
+
+                {/* Completed checkmark */}
+                {phase === 'completed' && (
+                  <>
+                    <motion.circle cx={node.x + DEF_W - 12} cy={node.y + 12} r={6} fill="#22c55e"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }} />
+                    <motion.path d={`M ${node.x + DEF_W - 15} ${node.y + 12} l 3 3 l 5 -5`}
+                      stroke="white" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.1, duration: 0.3 }} />
+                  </>
+                )}
+
+                {/* Phase badge: building */}
+                {phase === 'building' && !DEF_SOURCE_IDS.includes(node.id) && (
+                  <g>
+                    <rect x={node.x + DEF_W - 56} y={node.y + 2} width={52} height={14} rx={3} fill="#1e40af" />
+                    <text x={node.x + DEF_W - 30} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      building
+                    </text>
+                  </g>
+                )}
+                {/* Phase badge: testing */}
+                {phase === 'testing' && !DEF_SOURCE_IDS.includes(node.id) && (
+                  <g>
+                    <rect x={node.x + DEF_W - 52} y={node.y + 2} width={48} height={14} rx={3} fill="#7c3aed" />
+                    <text x={node.x + DEF_W - 28} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      testing
+                    </text>
+                  </g>
+                )}
+
+                {/* Schema badge for deferred nodes */}
+                {phase === 'deferred' && (
+                  <g>
+                    <rect x={node.x + DEF_W - 38} y={node.y + 2} width={34} height={14} rx={3} fill="#6b7280" />
+                    <text x={node.x + DEF_W - 21} y={node.y + 12} textAnchor="middle" fontSize={8} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      {schema.toUpperCase()}
+                    </text>
+                  </g>
+                )}
+
+                {/* Modified badge */}
+                {phase === 'modified' && (
+                  <g>
+                    <rect x={node.x + DEF_W - 58} y={node.y + 2} width={54} height={14} rx={3} fill="#f59e0b" />
+                    <text x={node.x + DEF_W - 31} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      target
+                    </text>
+                  </g>
+                )}
+
+                <text
+                  x={node.x + DEF_W / 2}
+                  y={node.y + DEF_H / 2 + 1}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={node.id === DEF_MART_ID ? 9 : 11}
+                  fontFamily="ui-monospace, monospace"
+                  fontWeight={600}
+                  fill={colors.text}
+                >
+                  {node.label}
+                </text>
+              </motion.g>
+            )
+          })}
+
+          {/* Column labels */}
+          <text x={130} y={420} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Sources</text>
+          <text x={350} y={420} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Staging</text>
+          <text x={610} y={420} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Intermediate</text>
+          <text x={880} y={420} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Marts</text>
+        </svg>
+      </div>
+
+      {/* Deferral callout (post-run, both states) */}
+      <AnimatePresence>
+        {!isRunning && hasRun && (
+          <motion.div
+            key={mode}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className={`mb-4 border rounded-xl p-3 text-xs leading-relaxed overflow-hidden ${
+              mode === 'with' ? 'border-blue-200 bg-blue-50/60 text-blue-800' : 'border-red-200 bg-red-50/60 text-red-800'
+            }`}
+          >
+            <p className="mb-2">
+              {mode === 'with'
+                ? <> With deferral, <code className="bg-blue-100 px-1 rounded font-mono">ref()</code> to unmodified models resolves to the production schema. Only <code className="bg-blue-100 px-1 rounded font-mono">fct_orders_with_customers_details</code> is built in qa; everything upstream is read from prod.</>
+                : <> Without deferral, <code className="bg-red-100 px-1 rounded font-mono">ref()</code> resolves to the qa schema. Every upstream model is rebuilt in qa before the target can run.</>
+              }
+            </p>
+            <div className={`rounded-lg p-2.5 font-mono text-[11px] leading-[18px] ${
+              mode === 'with' ? 'border border-blue-200 bg-white/80' : 'border border-red-200 bg-white/80'
+            }`}>
+              <div className="text-gray-400 text-[10px] mb-1 font-sans">compiled: fct_orders_with_customers_details</div>
+              <div><span className="text-blue-600">select</span> *</div>
+              <div className="bg-amber-100/80 rounded px-1 -mx-1">
+                <span className="text-blue-600">from</span> {mode === 'without'
+                  ? <span className="text-red-600 font-semibold">qa</span>
+                  : <span className="text-green-700">prod</span>
+                }.analytics.int_enriched_customer c
+              </div>
+              <div className="bg-amber-100/80 rounded px-1 -mx-1">
+                <span className="text-blue-600">join</span> {mode === 'without'
+                  ? <span className="text-red-600 font-semibold">qa</span>
+                  : <span className="text-green-700">prod</span>
+                }.analytics.int_enriched_orders o
+              </div>
+              <div className="pl-4"><span className="text-blue-600">on</span> c.customer_id = o.customer_id</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#93c5fd', border: '1.5px solid #3b82f6' }} /> Building (dev)</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#c4b5fd', border: '1.5px solid #7c3aed' }} /> Testing</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#86efac', border: '1.5px solid #22c55e' }} /> Complete (qa)</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#e5e7eb', border: '1.5px solid #9ca3af' }} /> Deferred (read from prod)</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed" style={{ borderColor: '#F97316' }} /> Target model</div>
+      </div>
+    </div>
+  )
+}
+
+/* ── SlimCISim (ported from StateModifiedAnimation.jsx, terminal/summary removed) ─── */
+function SlimCISim() {
+  const [mode, setMode] = useState('without')
+  const [nodePhases, setNodePhases] = useState({})
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasRun, setHasRun] = useState(false)
+  const [diffVisible, setDiffVisible] = useState(false)
+  const timeoutsRef = useRef([])
+
+  const reset = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setNodePhases({})
+    setIsRunning(false)
+    setHasRun(false)
+    setDiffVisible(false)
+  }, [])
+
+  const switchMode = (m) => { reset(); setMode(m) }
+
+  const addTimeout = (fn, ms) => {
+    const id = setTimeout(fn, ms)
+    timeoutsRef.current.push(id)
+    return id
+  }
+
+  const setPhase = (ids, phase) => setNodePhases(prev => {
+    const next = { ...prev }
+    ids.forEach(id => { next[id] = phase })
+    return next
+  })
+
+  /* Without state:modified */
+  const runWithout = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setIsRunning(true)
+    setHasRun(true)
+    setNodePhases({})
+    setDiffVisible(false)
+
+    addTimeout(() => { setDiffVisible(true) }, 300)
+
+    addTimeout(() => {
+      setPhase([SM_MODIFIED_ID], 'modified')
+      setPhase(SM_SOURCE_IDS, 'source')
+    }, 1800)
+
+    let t = 4200
+    const buildDur = 1200
+    const testDur = 1000
+    const gapDur = 400
+
+    smWithoutSteps.forEach((step) => {
+      const stepStart = t
+      addTimeout(() => { setPhase(step.ids, 'building') }, stepStart)
+      addTimeout(() => { setPhase(step.ids, 'testing') }, stepStart + buildDur)
+      addTimeout(() => { setPhase(step.ids, 'completed') }, stepStart + buildDur + testDur)
+      t = stepStart + buildDur + testDur + gapDur
+    })
+
+    addTimeout(() => { setIsRunning(false) }, t + 400)
+  }, [])
+
+  /* With state:modified */
+  const runWith = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setIsRunning(true)
+    setHasRun(true)
+    setNodePhases({})
+    setDiffVisible(false)
+
+    addTimeout(() => { setDiffVisible(true) }, 300)
+
+    addTimeout(() => {
+      setPhase([SM_MODIFIED_ID], 'modified')
+      setPhase(SM_SOURCE_IDS, 'source')
+    }, 1800)
+
+    addTimeout(() => { setPhase(SM_SKIPPED_IDS, 'skipped') }, 4500)
+    addTimeout(() => { setPhase([SM_MODIFIED_ID], 'building') }, 5900)
+    addTimeout(() => { setPhase([SM_MODIFIED_ID], 'testing') }, 7100)
+    addTimeout(() => { setPhase([SM_MODIFIED_ID], 'completed') }, 8300)
+    addTimeout(() => { setPhase([SM_DOWNSTREAM_ID], 'building') }, 8900)
+    addTimeout(() => { setPhase([SM_DOWNSTREAM_ID], 'testing') }, 10100)
+    addTimeout(() => { setPhase([SM_DOWNSTREAM_ID], 'completed') }, 11300)
+    addTimeout(() => { setIsRunning(false) }, 12100)
+  }, [])
+
+  const runAnimation = mode === 'without' ? runWithout : runWith
+
+  function getColors(nodeId) {
+    const phase = nodePhases[nodeId]
+    if (SM_SOURCE_IDS.includes(nodeId) && phase !== 'skipped') return smSourceC
+    if (phase === 'skipped') return smSkippedC
+    if (phase === 'building') return smBuildingC
+    if (phase === 'testing') return smTestingC
+    if (phase === 'completed') return smCompletedC
+    if (phase === 'modified') return smModifiedIdleC
+    if (SM_SOURCE_IDS.includes(nodeId)) return smSourceC
+    return smIdleC
+  }
+
+  function getEdgeState(edge) {
+    const fp = nodePhases[edge.from]
+    const tp = nodePhases[edge.to]
+    if (fp === 'skipped' || tp === 'skipped') return 'skipped'
+    if (tp === 'building') return 'building'
+    if (tp === 'testing') return 'testing'
+    if (fp === 'completed' && (tp === 'completed' || tp === 'building' || tp === 'testing')) return 'completed'
+    return 'idle'
+  }
+
+  return (
+    <div>
+      {/* Header: toggle + button */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="inline-flex bg-gray-100 rounded-xl p-1" role="radiogroup" aria-label="state:modified comparison">
+          <button role="radio" aria-checked={mode === 'without'}
+            onClick={() => switchMode('without')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              mode === 'without' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            <span>Without <code className="text-xs font-mono bg-gray-100 px-1 rounded">state:modified</code></span>
+          </button>
+          <button role="radio" aria-checked={mode === 'with'}
+            onClick={() => switchMode('with')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              mode === 'with' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            <span>With <code className="text-xs font-mono bg-gray-100 px-1 rounded">state:modified</code></span>
+          </button>
+        </div>
+        <button
+          onClick={runAnimation}
+          disabled={isRunning}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all duration-150 ${
+            isRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}>
+          {isRunning ? 'Running...' : hasRun ? 'Run again' : 'Run simulation'}
+        </button>
+      </div>
+
+      {/* Diff callout */}
+      <AnimatePresence>
+        {diffVisible && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-4 border border-amber-200 bg-amber-50/60 rounded-xl p-3 font-mono text-xs overflow-hidden"
+          >
+            <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider mb-1.5">Code change in int_enriched_orders</p>
+            <div className="text-red-600 bg-red-50 px-2 py-0.5 rounded mb-0.5">- sum(order_total) as order_total</div>
+            <div className="text-green-700 bg-green-50 px-2 py-0.5 rounded">+ round(sum(order_total), 2) as order_total</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DAG */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 overflow-x-auto">
+        <svg width="1060" height="350" viewBox="0 0 1060 350" className="w-full h-auto">
+          {/* Edges */}
+          {smEdges.map((edge) => {
+            const fromNode = smNodes.find(n => n.id === edge.from)
+            const toNode = smNodes.find(n => n.id === edge.to)
+            const path = smEdgePath(fromNode, toNode)
+            const state = getEdgeState(edge)
+            return (
+              <motion.path
+                key={`${edge.from}-${edge.to}`}
+                d={path}
+                fill="none"
+                strokeLinecap="round"
+                animate={{ stroke: smEdgeStroke(state), strokeWidth: state === 'building' || state === 'testing' ? 2.5 : 2 }}
+                strokeDasharray={state === 'skipped' ? '6 4' : 'none'}
+                transition={{ duration: 0.4 }}
+              />
+            )
+          })}
+
+          {/* Edge arrows */}
+          {smEdges.map((edge) => {
+            const toNode = smNodes.find(n => n.id === edge.to)
+            const state = getEdgeState(edge)
+            return (
+              <motion.circle
+                key={`arrow-${edge.from}-${edge.to}`}
+                cx={toNode.x - 4}
+                cy={toNode.y + SM_H / 2}
+                r={3}
+                animate={{ fill: smEdgeStroke(state) }}
+                transition={{ duration: 0.4 }}
+              />
+            )
+          })}
+
+          {/* Nodes */}
+          {smNodes.map((node) => {
+            const phase = nodePhases[node.id]
+            const colors = getColors(node.id)
+            const isModifiedNode = node.id === SM_MODIFIED_ID
+
+            return (
+              <motion.g key={node.id}>
+                {/* Modified marker (dashed amber border) */}
+                {isModifiedNode && diffVisible && (
+                  <rect
+                    x={node.x - 3} y={node.y - 3}
+                    width={SM_W + 6} height={SM_H + 6}
+                    rx={10} fill="none" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 3" opacity={0.6}
+                  />
+                )}
+
+                {/* Node rect */}
+                <motion.rect
+                  x={node.x} y={node.y} width={SM_W} height={SM_H} rx={8}
+                  animate={{ fill: colors.bg, stroke: colors.border }}
+                  strokeWidth={phase === 'building' || phase === 'testing' ? 2.5 : 1.5}
+                  transition={{ duration: 0.4 }}
+                />
+
+                {/* Active pulse */}
+                {(phase === 'building' || phase === 'testing') && (
+                  <motion.rect
+                    x={node.x} y={node.y} width={SM_W} height={SM_H} rx={8}
+                    fill="none" stroke={colors.border} strokeWidth={1}
+                    initial={{ opacity: 0.6 }}
+                    animate={{ opacity: [0.6, 0, 0.6] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                )}
+
+                {/* Completed checkmark */}
+                {phase === 'completed' && (
+                  <>
+                    <motion.circle
+                      cx={node.x + SM_W - 12} cy={node.y + 12} r={6} fill="#22c55e"
+                      initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                    />
+                    <motion.path
+                      d={`M ${node.x + SM_W - 15} ${node.y + 12} l 3 3 l 5 -5`}
+                      stroke="white" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                      transition={{ delay: 0.1, duration: 0.3 }}
+                    />
+                  </>
+                )}
+
+                {/* Phase badge: building */}
+                {phase === 'building' && !SM_SOURCE_IDS.includes(node.id) && (
+                  <g>
+                    <rect x={node.x + SM_W - 56} y={node.y + 2} width={52} height={14} rx={3} fill="#1e40af" />
+                    <text x={node.x + SM_W - 30} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      building
+                    </text>
+                  </g>
+                )}
+                {/* Phase badge: testing */}
+                {phase === 'testing' && !SM_SOURCE_IDS.includes(node.id) && (
+                  <g>
+                    <rect x={node.x + SM_W - 52} y={node.y + 2} width={48} height={14} rx={3} fill="#7c3aed" />
+                    <text x={node.x + SM_W - 28} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      testing
+                    </text>
+                  </g>
+                )}
+
+                {/* Skipped badge */}
+                {phase === 'skipped' && !SM_SOURCE_IDS.includes(node.id) && (
+                  <g>
+                    <rect x={node.x + SM_W - 52} y={node.y + 2} width={48} height={14} rx={3} fill="#6b7280" />
+                    <text x={node.x + SM_W - 28} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      skipped
+                    </text>
+                  </g>
+                )}
+
+                {/* Modified badge */}
+                {phase === 'modified' && (
+                  <g>
+                    <rect x={node.x + SM_W - 58} y={node.y + 2} width={54} height={14} rx={3} fill="#f59e0b" />
+                    <text x={node.x + SM_W - 31} y={node.y + 12} textAnchor="middle" fontSize={7} fontWeight={700} fill="white" fontFamily="ui-sans-serif,system-ui,sans-serif">
+                      modified
+                    </text>
+                  </g>
+                )}
+
+                {/* Node label */}
+                <text
+                  x={node.x + SM_W / 2}
+                  y={node.y + SM_H / 2 + 1}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize={node.id === 'fct_orders' ? 9 : 11}
+                  fontFamily="ui-monospace, monospace"
+                  fontWeight={600} fill={colors.text}
+                >
+                  {node.label}
+                </text>
+              </motion.g>
+            )
+          })}
+
+          {/* Column labels */}
+          <text x={130} y={340} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Sources</text>
+          <text x={350} y={340} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Staging</text>
+          <text x={610} y={340} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Intermediate</text>
+          <text x={880} y={340} textAnchor="middle" fontSize={10} fill="#9ca3af" fontWeight={500}>Marts</text>
+        </svg>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#93c5fd', border: '1.5px solid #3b82f6' }} /> Building</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#c4b5fd', border: '1.5px solid #7c3aed' }} /> Testing</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#86efac', border: '1.5px solid #22c55e' }} /> Complete</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: '#e5e7eb', border: '1.5px solid #9ca3af' }} /> Skipped (deferred)</div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed" style={{ borderColor: '#f59e0b' }} /> Modified node</div>
+      </div>
+    </div>
+  )
+}
+
+
+function QAStep2() {
+  const [mode, setMode] = useState('deferral')
+
+  return (
+    <div className="w-full space-y-4">
       {/* Step headline */}
       <div className="flex items-start gap-4">
         <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">2</div>
         <div>
           <h4 className="font-bold text-gray-900 text-lg leading-tight">Deferral + Slim CI: Run Only What Changed</h4>
           <p className="text-gray-500 text-sm mt-1">
-            The CI job uses two techniques together: <strong>deferral</strong> (read unchanged upstream results from production instead of rebuilding them) and <strong>slim CI</strong> (only build and test the changed model and its downstream dependents).
+            dbt runs only net changes and their downstream impact, using production (or staging) data.
           </p>
         </div>
       </div>
 
-      {/* Slim CI */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Slim CI: build only the changed model + its children</p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Without slim CI */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-red-100 border border-red-300 text-red-600 text-xs flex items-center justify-center font-bold shrink-0">✗</span>
-              <p className="text-xs font-semibold text-gray-600">Without slim CI: rebuilds all 7</p>
-            </div>
-            <div className="border border-red-200 rounded-xl p-3 bg-red-50">
-              <SelectiveDAG changedIds={[5]} runIds={ALL} uid="full" />
-            </div>
-          </div>
-
-          {/* With slim CI + deferral code panels */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-green-100 border border-green-300 text-green-600 text-xs flex items-center justify-center font-bold shrink-0">✓</span>
-              <p className="text-xs font-semibold text-gray-600">With slim CI: builds changed + downstream only</p>
-            </div>
-            <div className="border border-green-200 rounded-xl p-3 bg-green-50 overflow-visible">
-              <SelectiveDAG changedIds={[5]} runIds={SLIM} uid="slim" showDeferralHighlight />
-            </div>
-          </div>
-        </div>
-
-        {/* Code panels — full width, green left border ties to "With slim CI" */}
-        <div className="border-l-4 border-green-400 pl-4 space-y-3 mt-2">
-          <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Deferral: how ref() resolves to production at runtime</p>
-          <div className="flex items-stretch gap-3">
-            <div className="flex-1 min-w-0 border border-gray-200 rounded-lg p-3 bg-gray-50 text-xs font-mono text-gray-700 leading-relaxed overflow-x-auto">
-              <div className="text-gray-400 mb-1">int_enriched_orders.sql</div>
-              <div><span className="text-blue-600">with</span> orders <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {'{{ '}ref(<span className="text-green-600">'stg_orders'</span>){' }}'}</div>
-              <div>{'),'}</div>
-              <div>products <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> {'{{ '}ref(<span className="text-green-600">'stg_product'</span>){' }}'}</div>
-              <div>{')'}</div>
-            </div>
-            <div className="shrink-0 self-center text-gray-400 text-lg">→</div>
-            <div className="flex-1 min-w-0 border border-blue-200 rounded-lg p-3 bg-blue-50 text-xs font-mono text-gray-700 leading-relaxed overflow-x-auto">
-              <div className="text-gray-400 mb-1">compiled (deferred)</div>
-              <div><span className="text-blue-600">with</span> orders <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> <span className="text-amber-600">PROD.analytics.stg_orders</span></div>
-              <div>{'),'}</div>
-              <div>products <span className="text-blue-600">as</span> {'('}</div>
-              <div className="pl-4"><span className="text-blue-600">select</span> * <span className="text-blue-600">from</span> <span className="text-amber-600">PROD.analytics.stg_product</span></div>
-              <div>{')'}</div>
-            </div>
-          </div>
+      {/* Toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-gray-100 rounded-xl p-1">
+          {[{ key: 'deferral', label: 'Deferral' }, { key: 'slimci', label: 'Slim CI' }].map(t => (
+            <button
+              key={t.key}
+              onClick={() => setMode(t.key)}
+              className={`px-5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      <AnimatePresence mode="wait">
+        {mode === 'deferral' ? (
+          <motion.div key="deferral" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.25 }}>
+            <DeferralSim />
+          </motion.div>
+        ) : (
+          <motion.div key="slimci" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }}>
+            <SlimCISim />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1265,7 +2045,7 @@ function QAStep3() {
     <div className="w-full space-y-6">
       {/* Step headline */}
       <div className="flex items-start gap-4">
-        <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">3</div>
+        <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">4</div>
         <div>
           <h4 className="font-bold text-gray-900 text-lg leading-tight">Data Diffing</h4>
           <p className="text-gray-500 text-sm mt-1">
@@ -1316,12 +2096,431 @@ function QAStep3() {
   )
 }
 
-function QAStep4() {
+
+/* ── Project evaluator best-practice gate (ported from ProjectEvaluatorAnimation.jsx) ─── */
+const evalCategories = [
+  {
+    name: 'Modeling',
+    checks: [
+      'Direct join to source', 'Duplicate sources', 'Hard coded references',
+      'Model fanout', 'Source fanout', 'Multiple sources joined',
+      'Rejoining of upstream concepts', 'Root models',
+      'Downstream models dependent on source',
+      'Staging dependent on other staging',
+      'Staging dependent on downstream',
+      'Unused sources', 'Models with too many joins',
+    ],
+  },
+  {
+    name: 'Testing',
+    checks: ['Missing primary key tests', 'Missing source freshness', 'Test coverage'],
+  },
+  {
+    name: 'Documentation',
+    checks: ['Undocumented models', 'Documentation coverage', 'Undocumented sources', 'Undocumented source tables'],
+  },
+  {
+    name: 'Structure',
+    checks: ['Model naming conventions', 'Model directories', 'Source directories', 'Test directories'],
+  },
+  {
+    name: 'Performance',
+    checks: ['Chained view dependencies', 'Exposure parents materializations'],
+  },
+  {
+    name: 'Governance',
+    checks: ['Public models without contracts', 'Undocumented public models', 'Exposures dependent on private models'],
+  },
+]
+
+const evalTotalChecks = evalCategories.reduce((sum, c) => sum + c.checks.length, 0)
+
+const evalMessyWarnings = new Set([
+  'Direct join to source',
+  'Undocumented models',
+  'Test coverage',
+  'Model naming conventions',
+  'Public models without contracts',
+])
+
+function QAStep4_Evaluator() {
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasRun, setHasRun] = useState(false)
+  const [messy, setMessy] = useState(false)
+  const [categoryStates, setCategoryStates] = useState({})
+  const [passedCount, setPassedCount] = useState(0)
+  const [warnCount, setWarnCount] = useState(0)
+  const [phase, setPhase] = useState('idle')
+  const [terminalLines, setTerminalLines] = useState([])
+  const [expandedCat, setExpandedCat] = useState(null)
+  const timeoutsRef = useRef([])
+
+  const reset = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setCategoryStates({})
+    setPassedCount(0)
+    setWarnCount(0)
+    setPhase('idle')
+    setTerminalLines([])
+    setIsRunning(false)
+    setHasRun(false)
+    setExpandedCat(null)
+  }, [])
+
+  const runAnimation = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout)
+    timeoutsRef.current = []
+    setIsRunning(true)
+    setHasRun(true)
+    setPassedCount(0)
+    setWarnCount(0)
+    setPhase('evaluating')
+    setExpandedCat(null)
+
+    const init = {}
+    evalCategories.forEach(cat => {
+      const checks = {}
+      cat.checks.forEach(c => { checks[c] = 'pending' })
+      init[cat.name] = { status: 'pending', checks }
+    })
+    setCategoryStates(init)
+
+    setTerminalLines([
+      { text: '$ dbt build --select package:dbt_project_evaluator', type: 'command' },
+      { text: 'Running best-practice checks across the project...', type: 'info' },
+      { text: '', type: 'blank' },
+    ])
+
+    let delay = 600
+    let runningPassed = 0
+    let runningWarn = 0
+
+    evalCategories.forEach((cat) => {
+      const catStartDelay = delay
+      const t1 = setTimeout(() => {
+        setCategoryStates(prev => ({
+          ...prev,
+          [cat.name]: { ...prev[cat.name], status: 'running' },
+        }))
+        setExpandedCat(cat.name)
+        setTerminalLines(prev => [...prev, { text: `  [${cat.name}] Running ${cat.checks.length} checks...`, type: 'run' }])
+      }, catStartDelay)
+      timeoutsRef.current.push(t1)
+      delay += 400
+
+      cat.checks.forEach((check) => {
+        const checkDelay = delay
+        const t2 = setTimeout(() => {
+          setCategoryStates(prev => {
+            const updated = { ...prev }
+            updated[cat.name] = {
+              ...updated[cat.name],
+              checks: { ...updated[cat.name].checks, [check]: 'running' },
+            }
+            return updated
+          })
+        }, checkDelay)
+        timeoutsRef.current.push(t2)
+
+        const isWarn = messy && evalMessyWarnings.has(check)
+        const completeDelay = checkDelay + 180
+        const t3 = setTimeout(() => {
+          const result = isWarn ? 'warn' : 'pass'
+          setCategoryStates(prev => {
+            const updated = { ...prev }
+            updated[cat.name] = {
+              ...updated[cat.name],
+              checks: { ...updated[cat.name].checks, [check]: result },
+            }
+            return updated
+          })
+          if (isWarn) {
+            runningWarn++
+            setWarnCount(runningWarn)
+          } else {
+            runningPassed++
+            setPassedCount(runningPassed)
+          }
+        }, completeDelay)
+        timeoutsRef.current.push(t3)
+        delay = completeDelay + 80
+      })
+
+      const catEndDelay = delay + 100
+      const t4 = setTimeout(() => {
+        setCategoryStates(prev => ({
+          ...prev,
+          [cat.name]: { ...prev[cat.name], status: 'done' },
+        }))
+        const catWarnCount = cat.checks.filter(c => messy && evalMessyWarnings.has(c)).length
+        if (catWarnCount > 0) {
+          setTerminalLines(prev => [...prev, { text: `  [${cat.name}] ${cat.checks.length - catWarnCount} passed, ${catWarnCount} warnings`, type: 'warn' }])
+        } else {
+          setTerminalLines(prev => [...prev, { text: `  [${cat.name}] ${cat.checks.length}/${cat.checks.length} passed`, type: 'ok' }])
+        }
+      }, catEndDelay)
+      timeoutsRef.current.push(t4)
+      delay = catEndDelay + 200
+    })
+
+    const gateDelay = delay + 300
+    const t5 = setTimeout(() => {
+      setPhase('gate')
+      setExpandedCat(null)
+      const totalWarn = messy ? evalMessyWarnings.size : 0
+      if (totalWarn > 0) {
+        setTerminalLines(prev => [...prev,
+          { text: '', type: 'blank' },
+          { text: `Best practices: ${evalTotalChecks - totalWarn} passed, ${totalWarn} warnings`, type: 'warn' },
+          { text: 'Warnings found. Review before merging.', type: 'warn' },
+        ])
+      } else {
+        setTerminalLines(prev => [...prev,
+          { text: '', type: 'blank' },
+          { text: `Best practices: ${evalTotalChecks}/${evalTotalChecks} validated`, type: 'success' },
+          { text: 'Proceeding to project build...', type: 'success' },
+        ])
+      }
+    }, gateDelay)
+    timeoutsRef.current.push(t5)
+
+    const buildDelay = gateDelay + 1200
+    const t6 = setTimeout(() => {
+      setPhase('building')
+      setTerminalLines(prev => [...prev, { text: '', type: 'blank' }, { text: '$ dbt build', type: 'command' }, { text: '  Building project models...', type: 'run' }])
+    }, buildDelay)
+    timeoutsRef.current.push(t6)
+
+    const doneDelay = buildDelay + 1500
+    const t7 = setTimeout(() => {
+      setPhase('done')
+      setIsRunning(false)
+      setTerminalLines(prev => [...prev, { text: '  Build complete.', type: 'ok' }, { text: '', type: 'blank' }, { text: 'Done. CI job passed.', type: 'success' }])
+    }, doneDelay)
+    timeoutsRef.current.push(t7)
+  }, [messy])
+
+  const getCheckIcon = (state) => {
+    if (state === 'pass') return <span className="text-green-600 font-bold text-xs">&#10003;</span>
+    if (state === 'warn') return <span className="text-amber-500 font-bold text-xs">&#9888;</span>
+    if (state === 'running') return <span className="w-2 h-2 rounded-full bg-blue-500 inline-block animate-pulse" />
+    return <span className="w-2 h-2 rounded-full bg-gray-300 inline-block" />
+  }
+
+  const getCatIcon = (catName) => {
+    const cat = categoryStates[catName]
+    if (!cat) return <span className="w-3 h-3 rounded-full bg-gray-200 inline-block" />
+    if (cat.status === 'done') {
+      const hasWarn = Object.values(cat.checks).some(s => s === 'warn')
+      if (hasWarn) return <span className="text-amber-500 font-bold">&#9888;</span>
+      return <span className="text-green-600 font-bold">&#10003;</span>
+    }
+    if (cat.status === 'running') return <span className="w-3 h-3 rounded-full bg-blue-500 inline-block animate-pulse" />
+    return <span className="w-3 h-3 rounded-full bg-gray-200 inline-block" />
+  }
+
   return (
     <div className="w-full space-y-6">
       {/* Step headline */}
       <div className="flex items-start gap-4">
-        <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">4</div>
+        <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">3</div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h4 className="font-bold text-gray-900 text-lg leading-tight">Best-Practice Gate</h4>
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-semibold uppercase tracking-wider">Optional</span>
+          </div>
+          <p className="text-gray-500 text-sm mt-1">
+            The <code className="bg-gray-100 px-1 rounded text-xs font-mono">dbt_project_evaluator</code> package runs 29 best-practice checks on every PR, catching structural and governance issues before they reach production.
+          </p>
+        </div>
+      </div>
+
+      {/* Animation */}
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              CI job: best-practice gate
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">dbt_project_evaluator checks the project against dbt Labs best practices on every PR.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Messy toggle */}
+            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={messy}
+                onChange={(e) => { reset(); setMessy(e.target.checked) }}
+                className="rounded border-gray-300"
+              />
+              Messy project
+            </label>
+            <button
+              onClick={runAnimation}
+              disabled={isRunning}
+              className={`px-5 py-2 rounded-lg font-medium text-sm transition-all duration-150 ${
+                isRunning
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-900 text-white hover:bg-gray-800'
+              }`}
+            >
+              {isRunning ? 'Running...' : hasRun ? 'Run again' : 'Run CI job'}
+            </button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>Checks: {passedCount + warnCount} / {evalTotalChecks}</span>
+            <span>
+              {passedCount > 0 && <span className="text-green-600 mr-3">{passedCount} passed</span>}
+              {warnCount > 0 && <span className="text-amber-500">{warnCount} warnings</span>}
+            </span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full rounded-full ${warnCount > 0 ? 'bg-amber-400' : 'bg-green-500'}`}
+              initial={{ width: '0%' }}
+              animate={{ width: `${((passedCount + warnCount) / evalTotalChecks) * 100}%` }}
+              transition={{ duration: 0.2 }}
+            />
+          </div>
+        </div>
+
+        {/* Category cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          {evalCategories.map(cat => {
+            const state = categoryStates[cat.name]
+            const isExpanded = expandedCat === cat.name
+            const doneChecks = state ? Object.values(state.checks).filter(s => s === 'pass' || s === 'warn').length : 0
+
+            return (
+              <motion.div
+                key={cat.name}
+                whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                onClick={() => setExpandedCat(isExpanded ? null : cat.name)}
+                className={`border rounded-xl p-3 cursor-pointer transition-all duration-200 ${
+                  state?.status === 'running' ? 'border-blue-300 bg-blue-50/50' :
+                  state?.status === 'done' && Object.values(state.checks).some(s => s === 'warn') ? 'border-amber-300 bg-amber-50/50' :
+                  state?.status === 'done' ? 'border-green-300 bg-green-50/50' :
+                  'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {getCatIcon(cat.name)}
+                    <span className="text-sm font-semibold text-gray-800">{cat.name}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400">{doneChecks}/{cat.checks.length}</span>
+                </div>
+
+                {/* Expanded checks */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-2 space-y-0.5">
+                        {cat.checks.map(check => (
+                          <div key={check} className="flex items-center gap-2 text-[10px] text-gray-600 py-0.5">
+                            {getCheckIcon(state?.checks?.[check] || 'pending')}
+                            <span className={state?.checks?.[check] === 'warn' ? 'text-amber-600 font-medium' : ''}>{check}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Collapsed: just show count */}
+                {!isExpanded && doneChecks > 0 && doneChecks < cat.checks.length && (
+                  <div className="h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: `${(doneChecks / cat.checks.length) * 100}%` }} />
+                  </div>
+                )}
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* Gate status */}
+        <AnimatePresence>
+          {(phase === 'gate' || phase === 'building' || phase === 'done') && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mb-4 px-4 py-3 rounded-xl border text-sm font-medium ${
+                warnCount > 0
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
+                  : 'bg-green-50 border-green-200 text-green-800'
+              }`}
+            >
+              {warnCount > 0
+                ? `${warnCount} warning(s) found. Review flagged checks before merging.`
+                : phase === 'done'
+                  ? 'Best practices validated. CI job passed.'
+                  : 'Best practices validated. Proceeding to project build...'
+              }
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mb-4 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-300" /> Pending</div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" /> Running</div>
+          <div className="flex items-center gap-1.5"><span className="text-green-600 font-bold text-xs">&#10003;</span> Validated</div>
+          <div className="flex items-center gap-1.5"><span className="text-amber-500 font-bold text-xs">&#9888;</span> Warning</div>
+        </div>
+
+        {/* Console */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 font-mono text-xs max-h-48 overflow-y-auto">
+          <AnimatePresence>
+            {terminalLines.map((line, i) => (
+              <motion.div
+                key={`line-${i}`}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15 }}
+                className={
+                  line.type === 'command' ? 'text-emerald-700 font-bold' :
+                  line.type === 'info' ? 'text-gray-400' :
+                  line.type === 'run' ? 'text-blue-600' :
+                  line.type === 'ok' ? 'text-emerald-600' :
+                  line.type === 'success' ? 'text-emerald-700 font-bold' :
+                  line.type === 'warn' ? 'text-amber-600 font-semibold' :
+                  ''
+                }
+              >
+                {line.text || '\u00A0'}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {terminalLines.length === 0 && (
+            <div className="text-gray-400">Click &quot;Run CI job&quot; to see the best-practice gate...</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+function QAStep5() {
+  return (
+    <div className="w-full space-y-6">
+      {/* Step headline */}
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">5</div>
         <div>
           <h4 className="font-bold text-gray-900 text-lg leading-tight">Code Review &amp; Merge</h4>
           <p className="text-gray-500 text-sm mt-1">
@@ -1857,8 +3056,9 @@ function StepContent({ phaseId, stepId }) {
   if (phaseId === 'develop' && stepId === 4) return <DevelopStep4 />
   if (phaseId === 'qa'      && stepId === 1) return <QAStep1 />
   if (phaseId === 'qa'      && stepId === 2) return <QAStep2 />
-  if (phaseId === 'qa'      && stepId === 3) return <QAStep3 />
-  if (phaseId === 'qa'          && stepId === 4) return <QAStep4 />
+  if (phaseId === 'qa'      && stepId === 3) return <QAStep4_Evaluator />
+  if (phaseId === 'qa'      && stepId === 4) return <QAStep3 />
+  if (phaseId === 'qa'      && stepId === 5) return <QAStep5 />
   if (phaseId === 'production'  && stepId === 1) return <ProductionStep1 />
   if (phaseId === 'production'  && stepId === 2) return <ProductionStep2 />
   const phase = PHASES.find(p => p.id === phaseId)
@@ -1889,6 +3089,7 @@ const PHASES = [
       { id: 2, label: 'Step 2' },
       { id: 3, label: 'Step 3' },
       { id: 4, label: 'Step 4' },
+      { id: 5, label: 'Step 5' },
     ],
   },
   {
