@@ -254,7 +254,7 @@ export function AirflowWithDbt() {
     <Hl>transform = <Fn>DbtCloudRunJobOperator</Fn>(task_id=<St>'dbt_transform'</St>, job_id=<Op>67890</Op>, wait_for_termination=<Op>True</Op>)</Hl>{'\n'}
     refresh   = <Fn>TableauRefreshOperator</Fn>(task_id=<St>'refresh_dashboard'</St>, datasource_id=<St>'ds-id'</St>){'\n'}
 {'\n'}
-    extract {'>>'}  load  {'>>'}  transform  {'>>'}  refresh
+    <Rl>extract {'>>'}  load  {'>>'}  transform  {'>>'}  refresh</Rl>
             </pre>
           </div>
         </>
