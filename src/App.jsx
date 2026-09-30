@@ -25,6 +25,7 @@ import TestingExplanation from './components/TestingExplanation'
 import SettingUpTests from './components/SettingUpTests'
 import DbtBuildSimulator from './components/DbtBuildSimulator'
 import StateAwareOrchestration from './components/StateAwareOrchestration'
+import { AirflowOnly, AirflowWithDbt } from './components/AirflowComparison'
 
 // Mesh components
 import DbtMesh from './components/DbtMesh'
@@ -256,18 +257,31 @@ const orchPhases = [
   { key: 'deps', label: 'Phase 1: Dependency Management' },
   { key: 'testing', label: 'Phase 2: Testing Automation' },
   { key: 'state', label: 'Phase 3: dbt State' },
+  { key: 'airflow', label: 'Example: Airflow & dbt' },
 ]
 
 const orchPhaseDescs = {
   deps: 'How dbt automatically determines the correct build order from model references.',
   testing: 'Automated data quality checks that run as part of every build.',
   state: 'dbt can detect which sources have new data and only rebuild what is necessary.',
+  airflow: 'See how dbt simplifies orchestration compared to managing everything in Airflow alone.',
+}
+
+const airflowTabs = [
+  { key: 'airflow-only', label: 'Airflow only' },
+  { key: 'airflow-dbt', label: 'Airflow & dbt' },
+]
+
+const airflowDescs = {
+  'airflow-only': 'A typical Airflow DAG where every task and dependency must be explicitly defined.',
+  'airflow-dbt': '',
 }
 
 function OrchestrationPage() {
   const [activePhase, setActivePhase] = useState('deps')
   const [phase1View, setPhase1View] = useState('problem')
   const [phase2View, setPhase2View] = useState('concept')
+  const [airflowView, setAirflowView] = useState('airflow-only')
 
   return (
     <div className="section-container py-8">
@@ -403,6 +417,51 @@ function OrchestrationPage() {
           <motion.div key="state" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
             <div className="bg-white border border-gray-200/60 rounded-2xl p-6 shadow-sm">
               <StateAwareOrchestration />
+            </div>
+          </motion.div>
+        )}
+
+        {activePhase === 'airflow' && (
+          <motion.div key="airflow" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
+            <div className="text-center mb-5">
+              <div className="inline-flex bg-gray-100 rounded-xl p-1">
+                {airflowTabs.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setAirflowView(tab.key)}
+                    className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      airflowView === tab.key
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-5 text-center">
+              <AnimatePresence mode="wait">
+                <motion.div key={airflowView} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }}>
+                  <p className="text-sm text-gray-500">{airflowDescs[airflowView]}</p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <div className="bg-white border border-gray-200/60 rounded-2xl p-6 shadow-sm">
+              <AnimatePresence mode="wait">
+                {airflowView === 'airflow-only' && (
+                  <motion.div key="airflow-only" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
+                    <AirflowOnly />
+                  </motion.div>
+                )}
+                {airflowView === 'airflow-dbt' && (
+                  <motion.div key="airflow-dbt" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }}>
+                    <AirflowWithDbt />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
