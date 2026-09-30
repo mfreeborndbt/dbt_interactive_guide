@@ -273,7 +273,7 @@ const airflowTabs = [
 ]
 
 const airflowDescs = {
-  'airflow-only': 'A typical Airflow DAG where every task and dependency must be explicitly defined.',
+  'airflow-only': '',
   'airflow-dbt': '',
 }
 
